@@ -15,6 +15,7 @@ import {
   Mail
 } from 'lucide-react';
 import { formatDate, formatRelativeDate, isEventPast } from '../lib/events.utils';
+import { ScanCardTab } from './ScanCardTab';
 
 interface EventDetailProps {
   event?: Event;
@@ -321,22 +322,7 @@ export function EventDetail({
               <CardTitle>Scan Business Cards</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-center py-12">
-                <Upload className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                  Card Scanner
-                </h3>
-                <p className="text-gray-600 mb-6">
-                  Upload business card images to extract contact information
-                </p>
-                <Button
-                  onClick={() => onScanCard?.(event)}
-                  className="flex items-center gap-2"
-                >
-                  <Upload className="h-4 w-4" />
-                  Upload Business Cards
-                </Button>
-              </div>
+              <ScanCardTab eventId={event.id} />
             </CardContent>
           </Card>
         )}
