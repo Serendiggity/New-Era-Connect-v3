@@ -249,9 +249,7 @@ export class OcrJobService {
    * Update OCR job
    */
   async updateJob(data: UpdateOcrJobInput): Promise<OcrJobResult> {
-    const updateData: any = {
-      updatedAt: new Date(),
-    };
+    const updateData: any = {};
 
     if (data.status) updateData.status = data.status;
     if (data.error_message !== undefined) updateData.errorMessage = data.error_message;

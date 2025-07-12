@@ -16,7 +16,9 @@
     "db:migrate": "tsx src/scripts/db-migrate.ts",
     "db:test": "tsx src/scripts/db-test.ts",
     "storage:setup": "tsx src/scripts/setup-storage.ts",
-    "storage:debug": "tsx src/scripts/debug-upload.ts"
+    "storage:debug": "tsx src/scripts/debug-upload.ts",
+    "ocr:process": "tsx src/scripts/process-ocr.ts",
+    "ocr:test": "tsx src/scripts/test-ocr-simple.ts"
   },
   "dependencies": {
     "@business-card-manager/shared": "workspace:*",
