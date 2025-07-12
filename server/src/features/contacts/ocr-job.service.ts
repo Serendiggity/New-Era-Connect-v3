@@ -116,14 +116,14 @@ export class OcrJobService {
 
       // Update the contact with OCR results
       const updateData: any = {
-        ocr_confidence: enhancedData.confidence,
-        ocr_raw_data: enhancedData.raw_data,
+        ocrConfidence: enhancedData.confidence,
+        ocrRawData: enhancedData.raw_data,
         status: enhancedData.confidence >= 0.7 ? 'completed' : 'pending_review',
       };
 
       // Only update contact fields if they're not already set or if OCR confidence is high
       if (enhancedData.confidence >= 0.8 || !contact.fullName || contact.fullName.trim() === '') {
-        if (enhancedData.full_name) updateData.full_name = enhancedData.full_name;
+        if (enhancedData.full_name) updateData.fullName = enhancedData.full_name;
       }
       if (enhancedData.confidence >= 0.8 || !contact.email) {
         if (enhancedData.email) updateData.email = enhancedData.email;
@@ -138,7 +138,7 @@ export class OcrJobService {
         if (enhancedData.phone) updateData.phone = enhancedData.phone;
       }
       if (enhancedData.confidence >= 0.8 || !contact.linkedinUrl) {
-        if (enhancedData.linkedin_url) updateData.linkedin_url = enhancedData.linkedin_url;
+        if (enhancedData.linkedin_url) updateData.linkedinUrl = enhancedData.linkedin_url;
       }
 
       await contactsService.update(contact.id, updateData);
