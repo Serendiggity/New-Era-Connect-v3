@@ -1,8 +1,28 @@
 import { Router } from 'express';
+import multer from 'multer';
 import { contactsService, CreateContactSchema, UpdateContactSchema, ContactFiltersSchema, ContactStatusEnum } from './contacts.service.js';
+import { uploadService } from './upload.service.js';
+import { ocrJobService } from './ocr-job.service.js';
 import { z } from 'zod';
 
 const router = Router();
+
+// Configure multer for file uploads (memory storage)
+const upload = multer({ 
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 10 * 1024 * 1024, // 10MB limit
+  },
+  fileFilter: (req, file, cb) => {
+    // Check file type
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+    if (allowedTypes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error(`File type ${file.mimetype} not allowed`));
+    }
+  },
+});
 
 // GET /api/contacts - List all contacts with optional filters
 router.get('/', async (req, res) => {
@@ -162,6 +182,161 @@ router.post('/:id/ocr-result', async (req, res) => {
       console.error('Error processing OCR result:', error);
       res.status(500).json({ error: 'Failed to process OCR result' });
     }
+  }
+});
+
+// POST /api/contacts/upload - Upload business card image and create contact
+router.post('/upload', upload.single('businessCard'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No file uploaded' });
+    }
+
+    // Validate additional contact data
+    const contactDataSchema = z.object({
+      event_id: z.string().optional().transform(val => val ? parseInt(val, 10) : undefined),
+      full_name: z.string().min(1).optional(),
+    });
+
+    const contactData = contactDataSchema.parse(req.body);
+
+    // Prepare file for upload
+    const uploadedFile = {
+      originalName: req.file.originalname,
+      filename: req.file.originalname,
+      mimetype: req.file.mimetype,
+      size: req.file.size,
+      buffer: req.file.buffer,
+    };
+
+    // Upload file to Supabase Storage
+    const uploadResult = await uploadService.uploadFile(uploadedFile);
+
+    // Create contact with business card URL
+    const contact = await contactsService.create({
+      event_id: contactData.event_id,
+      full_name: contactData.full_name || 'Processing...',
+      business_card_url: uploadResult.url,
+      status: 'processing',
+    });
+
+    // Create OCR job for processing
+    const ocrJob = await ocrJobService.createJob({
+      contact_id: contact.id,
+      business_card_url: uploadResult.url,
+    });
+
+    // Start processing the OCR job asynchronously
+    ocrJobService.processJob(ocrJob.id).catch(error => {
+      console.error(`Failed to process OCR job ${ocrJob.id}:`, error);
+    });
+
+    res.status(201).json({
+      data: {
+        contact,
+        upload: uploadResult,
+        ocrJob,
+      },
+    });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      res.status(400).json({ error: 'Invalid request data', details: error.errors });
+    } else if (error instanceof Error && error.message.includes('File type')) {
+      res.status(400).json({ error: error.message });
+    } else {
+      console.error('Error uploading business card:', error);
+      res.status(500).json({ error: 'Failed to upload business card' });
+    }
+  }
+});
+
+// POST /api/contacts/:id/upload - Upload business card for existing contact
+router.post('/:id/upload', upload.single('businessCard'), async (req, res) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    if (isNaN(id)) {
+      return res.status(400).json({ error: 'Invalid contact ID' });
+    }
+
+    if (!req.file) {
+      return res.status(400).json({ error: 'No file uploaded' });
+    }
+
+    // Check if contact exists
+    const existingContact = await contactsService.findById(id);
+
+    // Prepare file for upload
+    const uploadedFile = {
+      originalName: req.file.originalname,
+      filename: req.file.originalname,
+      mimetype: req.file.mimetype,
+      size: req.file.size,
+      buffer: req.file.buffer,
+    };
+
+    // Upload file to Supabase Storage
+    const uploadResult = await uploadService.uploadFile(uploadedFile);
+
+    // Update contact with business card URL
+    const contact = await contactsService.update(id, {
+      business_card_url: uploadResult.url,
+      status: 'processing',
+    });
+
+    // Create OCR job for processing
+    const ocrJob = await ocrJobService.createJob({
+      contact_id: contact.id,
+      business_card_url: uploadResult.url,
+    });
+
+    // Start processing the OCR job asynchronously
+    ocrJobService.processJob(ocrJob.id).catch(error => {
+      console.error(`Failed to process OCR job ${ocrJob.id}:`, error);
+    });
+
+    res.json({
+      data: {
+        contact,
+        upload: uploadResult,
+        ocrJob,
+      },
+    });
+  } catch (error) {
+    if (error instanceof Error && error.message.includes('not found')) {
+      res.status(404).json({ error: error.message });
+    } else if (error instanceof Error && error.message.includes('File type')) {
+      res.status(400).json({ error: error.message });
+    } else {
+      console.error('Error uploading business card:', error);
+      res.status(500).json({ error: 'Failed to upload business card' });
+    }
+  }
+});
+
+// GET /api/contacts/:id/ocr-jobs - Get OCR jobs for a contact
+router.get('/:id/ocr-jobs', async (req, res) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    if (isNaN(id)) {
+      return res.status(400).json({ error: 'Invalid contact ID' });
+    }
+
+    const jobs = await ocrJobService.findByContactId(id);
+    res.json({ data: jobs });
+  } catch (error) {
+    console.error('Error fetching OCR jobs:', error);
+    res.status(500).json({ error: 'Failed to fetch OCR jobs' });
+  }
+});
+
+// POST /api/contacts/process-pending-ocr - Process all pending OCR jobs
+router.post('/process-pending-ocr', async (req, res) => {
+  try {
+    const result = await ocrJobService.processPendingJobs();
+    res.json({ data: result });
+  } catch (error) {
+    console.error('Error processing pending OCR jobs:', error);
+    res.status(500).json({ error: 'Failed to process pending OCR jobs' });
   }
 });
 

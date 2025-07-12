@@ -1,9 +1,12 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useContacts, useDeleteContact, useBulkUpdateContactStatus, ContactFilters } from '../api/contacts.api';
+import { Eye, Upload } from 'lucide-react';
+import { useContacts, useDeleteContact, useBulkUpdateContactStatus, useUpdateContact, ContactFilters } from '../api/contacts.api';
 import { getContactStatusDisplay, formatPhoneNumber } from '../lib/contacts.utils';
 import { Button, LoadingSpinner } from '../../../shared/ui';
-import type { ContactStatus } from '../../../../../shared/src/types/contact';
+import { OcrReviewModal } from './OcrReviewModal';
+import { BulkGroupAssignment } from '../../lead-groups';
+import type { Contact, ContactStatus } from '../../../../../shared/src/types/contact';
 
 interface ContactListProps {
   eventId?: number;
@@ -13,10 +16,12 @@ interface ContactListProps {
 export function ContactList({ eventId, onContactSelect }: ContactListProps) {
   const [filters, setFilters] = useState<ContactFilters>({ eventId });
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [reviewContact, setReviewContact] = useState<Contact | null>(null);
   
   const { data: contacts, isLoading, error } = useContacts(filters);
   const deleteContact = useDeleteContact();
   const bulkUpdateStatus = useBulkUpdateContactStatus();
+  const updateContact = useUpdateContact();
 
   const handleSelectAll = () => {
     if (selectedIds.size === contacts?.length) {
@@ -50,6 +55,27 @@ export function ContactList({ eventId, onContactSelect }: ContactListProps) {
     if (confirm('Are you sure you want to delete this contact?')) {
       await deleteContact.mutateAsync(id);
     }
+  };
+
+  const handleReviewContact = (contact: Contact) => {
+    setReviewContact(contact);
+  };
+
+  const handleSaveReview = async (updatedData: Partial<Contact>) => {
+    if (!reviewContact) return;
+    
+    await updateContact.mutateAsync({
+      id: reviewContact.id,
+      data: updatedData,
+    });
+    
+    setReviewContact(null);
+  };
+
+  const needsReview = (contact: Contact) => {
+    return contact.status === 'pending_review' && 
+           contact.ocr_confidence && 
+           parseFloat(contact.ocr_confidence) < 0.7;
   };
 
   if (isLoading) return <LoadingSpinner />;
@@ -106,6 +132,10 @@ export function ContactList({ eventId, onContactSelect }: ContactListProps) {
           <Button size="sm" onClick={() => handleBulkStatusUpdate('user_verified')}>
             Mark as Verified
           </Button>
+          <BulkGroupAssignment
+            selectedContactIds={Array.from(selectedIds)}
+            onSuccess={() => setSelectedIds(new Set())}
+          />
           <Button size="sm" variant="secondary" onClick={() => setSelectedIds(new Set())}>
             Clear Selection
           </Button>
@@ -183,6 +213,28 @@ export function ContactList({ eventId, onContactSelect }: ContactListProps) {
                   </td>
                   <td className="px-3 py-2">
                     <div className="flex gap-2">
+                      {needsReview(contact) && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => handleReviewContact(contact)}
+                          className="text-yellow-600 hover:text-yellow-700"
+                        >
+                          <Eye className="h-3 w-3 mr-1" />
+                          Review
+                        </Button>
+                      )}
+                      {contact.business_card_url && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => window.open(contact.business_card_url, '_blank')}
+                          className="text-blue-600 hover:text-blue-700"
+                        >
+                          <Upload className="h-3 w-3 mr-1" />
+                          Card
+                        </Button>
+                      )}
                       <Link
                         to={`/contacts/${contact.id}/edit`}
                         className="text-sm text-blue-600 hover:underline"
@@ -203,6 +255,17 @@ export function ContactList({ eventId, onContactSelect }: ContactListProps) {
           </tbody>
         </table>
       </div>
+
+      {/* OCR Review Modal */}
+      {reviewContact && (
+        <OcrReviewModal
+          contact={reviewContact}
+          isOpen={!!reviewContact}
+          onClose={() => setReviewContact(null)}
+          onSave={handleSaveReview}
+          isSaving={updateContact.isPending}
+        />
+      )}
     </div>
   );
 }

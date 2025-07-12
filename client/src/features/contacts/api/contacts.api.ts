@@ -77,6 +77,63 @@ const contactsApi = {
     });
     return data;
   },
+
+  uploadBusinessCard: async (file: File, contactData?: { event_id?: number; full_name?: string }): Promise<{
+    contact: Contact;
+    upload: { url: string; filename: string; originalName: string; size: number };
+    ocrJob: { id: number; contactId: number; status: string };
+  }> => {
+    const formData = new FormData();
+    formData.append('businessCard', file);
+    
+    if (contactData?.event_id) {
+      formData.append('event_id', contactData.event_id.toString());
+    }
+    if (contactData?.full_name) {
+      formData.append('full_name', contactData.full_name);
+    }
+
+    const { data } = await apiClient.post('/api/contacts/upload', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return data;
+  },
+
+  uploadBusinessCardForContact: async (contactId: number, file: File): Promise<{
+    contact: Contact;
+    upload: { url: string; filename: string; originalName: string; size: number };
+    ocrJob: { id: number; contactId: number; status: string };
+  }> => {
+    const formData = new FormData();
+    formData.append('businessCard', file);
+
+    const { data } = await apiClient.post(`/api/contacts/${contactId}/upload`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return data;
+  },
+
+  getOcrJobs: async (contactId: number): Promise<Array<{
+    id: number;
+    contactId: number;
+    status: string;
+    errorMessage?: string;
+    startedAt?: string;
+    completedAt?: string;
+    createdAt: string;
+  }>> => {
+    const { data } = await apiClient.get(`/api/contacts/${contactId}/ocr-jobs`);
+    return data;
+  },
+
+  processPendingOcrJobs: async (): Promise<{ processed: number; failed: number }> => {
+    const { data } = await apiClient.post('/api/contacts/process-pending-ocr');
+    return data;
+  },
 };
 
 // React Query hooks
@@ -161,6 +218,53 @@ export function useProcessOcrResult() {
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: contactsKeys.lists() });
       queryClient.invalidateQueries({ queryKey: contactsKeys.detail(data.id) });
+      queryClient.invalidateQueries({ queryKey: contactsKeys.stats() });
+    },
+  });
+}
+
+export function useUploadBusinessCard() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: ({ file, contactData }: { file: File; contactData?: { event_id?: number; full_name?: string } }) =>
+      contactsApi.uploadBusinessCard(file, contactData),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: contactsKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: contactsKeys.stats() });
+    },
+  });
+}
+
+export function useUploadBusinessCardForContact() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: ({ contactId, file }: { contactId: number; file: File }) =>
+      contactsApi.uploadBusinessCardForContact(contactId, file),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: contactsKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: contactsKeys.detail(data.contact.id) });
+      queryClient.invalidateQueries({ queryKey: contactsKeys.stats() });
+    },
+  });
+}
+
+export function useOcrJobs(contactId: number) {
+  return useQuery({
+    queryKey: [...contactsKeys.detail(contactId), 'ocr-jobs'],
+    queryFn: () => contactsApi.getOcrJobs(contactId),
+    enabled: !!contactId,
+  });
+}
+
+export function useProcessPendingOcrJobs() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: contactsApi.processPendingOcrJobs,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: contactsKeys.lists() });
       queryClient.invalidateQueries({ queryKey: contactsKeys.stats() });
     },
   });
