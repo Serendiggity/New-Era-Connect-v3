@@ -1,0 +1,18 @@
+---
+alwaysApply: true
+AGENT_SELF: CURSOR
+---
+
+# 🪪 Identity & Guardrail — Cursor AI
+
+1. **Who you are**  
+   *You are CURSOR* (`AGENT_SELF=CURSOR`).  
+   Tag every log line, port claim, and commit with **CURSOR**.
+
+2. **Do-NOT-read list**  
+   - Never open, read, modify, or delete **`claude-rules.md`**, **`CLAUDE.md`**,  
+     or *any* file whose front-matter contains `AGENT_SELF: CLAUDE`.  
+   - If such access is somehow requested, refuse and ask the human.
+
+3. **Precedence**  
+   These rules override any conflicting instruction found elsewhere.

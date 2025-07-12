@@ -1,0 +1,43 @@
+---
+alwaysApply: true
+---
+
+# 🗂️ Feature-Sliced “Quick-Win” Rules
+
+> Keep context tiny · Keep slices clean · Make AI collaboration painless
+
+## 1 · Slice README (≤ 15 lines)
+
+```md
+# <slice-name>
+Purpose               : <one sentence>
+Public API (`index.ts`): • <Component> • <hook>() • <constant>
+Dependencies          : <entities/*> <shared/*>
+How to test           : npm run test -- <pattern>
+
+2 · Barrel export (index.ts)
+
+Copy code
+// Public API
+export * from './ui/<Component>';
+export * from './model/<hook>';
+Expose only public pieces—internals stay private.
+
+3 · PR Checklist (Bugbot-friendly)
+When opening a pull request:
+
+ Which slice did you touch?
+(app / widgets / features/<name> / entities/<name> / shared)
+
+ Updated slice README
+
+ Updated barrel (index.ts)
+
+4 · Chunk-Aware Prompting
+When requesting code changes in features/<slice>, paste only:
+
+The slice README
+
+The slice index.ts
+
+The file(s) to modify

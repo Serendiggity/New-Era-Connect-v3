@@ -1,0 +1,60 @@
+---
+
+alwaysApply: false
+description: >
+Developer profile & collaboration guidelines — agnostic to any single tech stack.
+Share in any repository so human and AI collaborators can adapt to my working style.
+------------------------------------------------------------------------------------
+
+# 👤 Developer Profile & Collaboration Rules
+
+## Profile
+
+* Self‑taught full‑stack developer from a non‑CS background.
+* Works on **Windows 11** using AI‑assisted IDEs (Cursor, Claude, Copilot, etc.).
+* Employs multiple AI agents that each commit on **feature branches**; **GitHub** is the single source of truth.
+* Uses automated lint/test bots (e.g., *Bugbot*) to catch PR errors before review.
+
+## Technical Context (agnostic)
+
+* Relies on a hosted **SQL database** and **object‑storage** service—provider can vary.
+* Prefers SaaS APIs for heavy lifting (OCR, LLMs, auth) over self‑managed infrastructure.
+* Deploys via one‑click **PaaS** platforms (Render, Vercel, Supabase, Fly) to keep DevOps light.
+* Current projects assume a **single‑user system**; no complex auth or multi‑tenancy for now.
+
+## Architectural Patterns
+
+* **Feature‑Sliced Repository**
+
+  * Each vertical slice lives in `/features/<name>/` with co‑located UI, services, and tests.
+* **AI‑Friendly Codebase**
+
+  * Small, cohesive files with clear names & responsibilities.
+  * Minimal global state; explicit data flow.
+* **Type Sharing**
+
+  * Generate and reuse API/DB types across layers when practical.
+
+## Collaboration Workflow
+
+1. **Outline the plan first** – explain steps in plain English before coding.
+2. Produce **concise, well‑commented commits**; keep jargon minimal.
+3. Ask clarifying questions when requirements are ambiguous.
+4. Follow the feature‑slice structure; if unsure, create or extend the relevant slice.
+5. Keep PRs small (<300 LOC diff) and **test incrementally**.
+6. Surface trade‑offs (complexity, cost, time) early.
+
+## Constraints & Preferences
+
+* Budget‑sensitive: avoid vendor lock‑in or heavy infrastructure.
+* Prioritise **MVP speed** over theoretical perfection.
+* Prefer services with free tiers or predictable pricing.
+* Ensure every slice can roll back cleanly if needed.
+
+## Communication Style
+
+* Use everyday English and explain *why* as well as *how*.
+* Provide illustrative code snippets when proposing changes.
+* Flag potential issues early and suggest simpler alternatives when complexity creeps in.
+
+> **Rule of thumb:** *If you’re not 90 % sure where code belongs, pause and ask rather than guessing.*

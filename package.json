@@ -1,0 +1,24 @@
+{
+  "name": "business-card-manager",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Business Card Lead Manager MVP - Scan, organize, and email your event contacts",
+  "scripts": {
+    "dev": "pnpm run --parallel dev",
+    "build": "pnpm run --recursive build",
+    "lint": "pnpm run --recursive lint",
+    "typecheck": "pnpm run --recursive typecheck",
+    "test": "pnpm run --recursive test",
+    "clean": "pnpm run --recursive clean && rm -rf node_modules"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.3"
+  },
+  "packageManager": "pnpm@8.14.0",
+  "engines": {
+    "node": ">=18.0.0",
+    "pnpm": ">=8.0.0"
+  }
+}

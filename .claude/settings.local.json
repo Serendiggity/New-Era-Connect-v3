@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find:*)",
+      "Bash(ls:*)",
+      "Bash(test:*)",
+      "Bash(cat:*)",
+      "Bash(git init:*)",
+      "Bash(npm create:*)",
+      "Bash(mkdir:*)",
+      "Bash(pnpm install:*)",
+      "Bash(pnpm build:*)",
+      "Bash(pnpm --filter shared build)",
+      "Bash(curl:*)",
+      "Bash(pnpm:*)",
+      "Bash(npx tsx:*)",
+      "Bash(npm install:*)"
+    ],
+    "deny": []
+  }
+}

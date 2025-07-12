@@ -1,0 +1,41 @@
+{
+  "name": "@business-card-manager/server",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "main": "dist/index.js",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "lint": "eslint . --max-warnings 0",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist node_modules",
+    "db:assess": "tsx src/scripts/db-assessment.ts",
+    "db:clean": "tsx src/scripts/db-cleanup.ts",
+    "db:migrate": "tsx src/scripts/db-migrate.ts",
+    "db:test": "tsx src/scripts/db-test.ts"
+  },
+  "dependencies": {
+    "@business-card-manager/shared": "workspace:*",
+    "@supabase/supabase-js": "^2.39.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "drizzle-orm": "^0.29.3",
+    "express": "^4.18.2",
+    "express-async-errors": "^3.1.1",
+    "openai": "^4.24.7",
+    "postgres": "^3.4.7",
+    "tesseract.js": "^5.0.4",
+    "zod": "^3.22.4"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.17",
+    "@types/express": "^4.17.21",
+    "@types/node": "^20.11.0",
+    "drizzle-kit": "^0.20.17",
+    "eslint": "^8.56.0",
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.3"
+  }
+}

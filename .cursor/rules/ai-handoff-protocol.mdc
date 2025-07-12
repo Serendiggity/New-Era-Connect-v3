@@ -1,0 +1,47 @@
+---
+alwaysApply: true
+---
+
+# 🤝 AI Handoff Protocol
+
+Purpose → lossless, trackable transfers between **Claude (WSL)** and **Cursor (Win)**.
+
+---
+
+## 1 ▪ Before you start
+*Verify that `AGENT_SELF` matches the branch’s expected author:*  
+- `CURSOR` ⇒ active coding / implementation branches  
+- `CLAUDE` ⇒ design and review branches
+
+Abort with a warning if mismatch.
+
+---
+
+## 2 ▪ Artefacts
+
+| Tag | File | Size cap |
+|-----|------|----------|
+| `handoff:plan`   | `*-slice-plan.md`      | ≤ 400 tokens |
+| `handoff:impl`   | PR diff / commit patch | — |
+| `handoff:review` | PR comments            | — |
+| `handoff:done`   | Merge commit note      | 1 line |
+
+---
+
+## 3 ▪ Workflow
+
+1. **Claude** designs feature slice → commit with tag `handoff:plan`.  
+2. **Cursor** implements & tests → open PR tagged `handoff:impl`.  
+3. **Claude** reviews, requests changes, approves → `handoff:review`.  
+4. **Cursor** merges → add `handoff:done` note to changelog.  
+5. Repeat per slice.
+
+---
+
+## 4 ▪ Service-level goals
+
+* Turnaround per hand-off ≤ 4 hrs during business day.  
+* Zero lost context (design doc must fully cover acceptance criteria).  
+* PR passes unit & integration tests before `handoff:review`.
+
+*END*

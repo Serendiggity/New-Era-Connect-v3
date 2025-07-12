@@ -1,0 +1,36 @@
+---
+alwaysApply: true
+---
+
+## 🛡️ Environment & Secret Safety
+
+### 1 ▪ Never commit secrets  
+* No `.env`, `.env.local`, `.env.production` in Git.  
+* Provide **`.env.example`** whenever you add a new key.
+
+### 2 ▪ Critical runtime vars
+
+| Var | Purpose |
+|-----|---------|
+| `AGENT_SELF` | Must be either `CURSOR` or `CLAUDE`; scripts abort if unset. |
+| `PORT` / `API_PORT` | Allocated via `rules/port-pool.mdc`; logged in `ports.log`. |
+
+### 3 ▪ Port hygiene  
+* All claims & releases follow **`rules/port-pool.mdc`**.  
+* Never hijack a PID you didn’t record yourself.  
+* Before killing a PID, confirm it belongs to this repo path.
+
+### 4 ▪ Example helper
+
+```bash
+# scripts/with-ports.sh
+set -e
+source ./scripts/claim_slot.sh          # writes to ports.log, exports PORT/API_PORT
+npm run dev
+trap "scripts/release_slot.sh $$" EXIT  # removes own line
+```
+
+### 5 ▪ Pre-push guard  
+CI rejects a commit if it contains `.env` or hard-coded secrets.
+
+*END*

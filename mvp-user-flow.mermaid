@@ -1,0 +1,50 @@
+graph TD
+    A[Dashboard] --> B{User Action}
+    
+    B -->|Create Event| C[Events Page]
+    C --> D[Create Event Modal]
+    D --> E[Event Created]
+    E --> F[Event Detail Page]
+    
+    B -->|Upload Cards| G[Scan Card Page]
+    G --> H[Select Event]
+    H --> I[Upload Image]
+    I --> J{OCR Processing}
+    
+    J -->|High Confidence| K[Contact Saved]
+    J -->|Low Confidence| L[Review Queue]
+    
+    L --> M[Review Modal]
+    M --> N[User Verifies/Edits]
+    N --> K
+    
+    K --> O[Contacts Page]
+    
+    O --> P{Bulk Actions}
+    P -->|Create Group| Q[Select Contacts]
+    Q --> R[Name Group]
+    R --> S[Lead Group Created]
+    
+    S --> T[Email Campaigns Page]
+    T --> U[Select Lead Group]
+    U --> V[Select Template]
+    V --> W[Generate AI Drafts]
+    
+    W --> X{Export Options}
+    X -->|Gmail CSV| Y[Download CSV for Mail Merge]
+    X -->|Full Export| Z[Download with All Contact Data]
+    X -->|Simple List| AA[Download Email List]
+    
+    B -->|View Contacts| O
+    B -->|Manage Emails| T
+    
+    F -->|Scan New Card| G
+    O -->|Filter by Event| F
+    
+    style A fill:#e1f5fe
+    style K fill:#c8e6c9
+    style L fill:#fff9c4
+    style W fill:#d1c4e9
+    style Y fill:#ffccbc
+    style Z fill:#ffccbc
+    style AA fill:#ffccbc

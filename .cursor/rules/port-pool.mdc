@@ -1,0 +1,45 @@
+---
+alwaysApply: true
+---
+
+## 🔒 Port Pool Rule — Agent-aware
+
+> Two primary AIs can run in parallel without collisions; one spare slot remains.
+
+### 1 ▪ Port Map
+
+| Slot | Agent (preferred) | FE | BE |
+|------|-------------------|----|----|
+| A    | **Cursor**        | 3000 | 8000 |
+| B    | **Claude**        | 3002 | 8002 |
+| C    | Any / overflow    | 3004 | 8004 |
+
+### 2 ▪ Claim protocol
+
+1. **Agent looks for its preferred slot** in `ports.log`.  
+2. If the slot is **free**, append a line:  
+   `<FE> <BE> <branch> <PID> <AGENT_SELF> <ISO-time>`
+
+```bash
+# Example
+echo "3002 8002 feat/ocr-flow $$ $AGENT_SELF $(date -Iseconds)" >> ports.log
+```
+
+3. If preferred slot busy, check the others in order A → B → C.  
+4. If all three busy, ask user whether to kill the oldest PID.
+
+### 3 ▪ Start servers
+
+```bash
+export PORT=<FE> API_PORT=<BE>
+echo "🔧 $AGENT_SELF using PORT=$PORT  API_PORT=$API_PORT  (slot $(Slot))"
+npm run dev   # or next dev, vite, uvicorn, etc.
+```
+
+### 4 ▪ Release slot on exit
+Remove your own line-entry from ports.log (match by PID).
+
+### 5 ▪ Safety guard
+Before killing any PID, confirm it belongs to the repo path or ask the user.
+
+*END*
