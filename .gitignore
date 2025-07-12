@@ -59,3 +59,6 @@ temp/
 # Supabase
 supabase/.branches
 supabase/.temp
+
+# Private documentation with security information
+docs/TECH-DEBT.md

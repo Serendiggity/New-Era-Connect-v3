@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@business-card-manager/shared": "workspace:*",
+    "@hookform/resolvers": "^5.1.1",
     "@radix-ui/react-slot": "^1.0.2",
     "@tanstack/react-query": "^5.17.19",
     "class-variance-authority": "^0.7.0",
@@ -20,6 +21,7 @@
     "lucide-react": "^0.312.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
+    "react-hook-form": "^7.60.0",
     "react-router-dom": "^6.21.3",
     "tailwind-merge": "^2.2.0",
     "tailwindcss-animate": "^1.0.7"

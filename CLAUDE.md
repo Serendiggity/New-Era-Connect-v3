@@ -12,7 +12,8 @@ Business Card Lead Manager MVP - A single-user system for scanning business card
 - `mvp-project-plan.md` - 14-day implementation roadmap
 - `mvp-database-schema.md` - Complete PostgreSQL schema
 - `updated-ui-design.md` - UI/UX specifications
-- `CLAUDE_RULES.md` - Development rules and conventions
+- `claude-rules.md` - Development rules and conventions
+- `docs/TECH-DEBT.md` - Technical debt and security TODOs (private, not committed)
 
 ## Essential Rules
 
@@ -127,6 +128,7 @@ NODE_ENV=development
 3. **Add API endpoint**: Create route in feature slice, add validation, log activity
 4. **Handle OCR results**: Check confidence score, set appropriate status, queue for review if needed
 5. **Export campaigns**: Generate CSV with proper formatting for Gmail mail merge
+6. **Track technical debt**: When taking shortcuts for MVP speed, document in `docs/TECH-DEBT.md` with security implications and timeline for fixes
 
 ## UI Components & Pages
 
