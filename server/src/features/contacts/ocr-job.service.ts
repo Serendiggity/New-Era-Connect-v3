@@ -122,7 +122,7 @@ export class OcrJobService {
       };
 
       // Only update contact fields if they're not already set or if OCR confidence is high
-      if (enhancedData.confidence >= 0.8 || !contact.fullName || contact.fullName.trim() === '') {
+      if (enhancedData.confidence >= 0.8 || !contact.fullName || contact.fullName.trim() === '' || contact.fullName === 'Processing...') {
         if (enhancedData.full_name) updateData.fullName = enhancedData.full_name;
       }
       if (enhancedData.confidence >= 0.8 || !contact.email) {

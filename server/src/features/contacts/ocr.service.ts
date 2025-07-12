@@ -81,6 +81,8 @@ export class OcrService {
     const text = ocrResult.text;
     const lines = text.split('\n').map(line => line.trim()).filter(line => line.length > 0);
     
+    console.log('[OCR DEBUG] OCR lines:', lines);
+    
     const result: ParsedContactData = {
       confidence: ocrResult.confidence,
       raw_text: text,
@@ -125,6 +127,24 @@ export class OcrService {
     const firstLine = lines[0];
     if (this.looksLikeName(firstLine)) {
       result.full_name = this.cleanName(firstLine);
+      console.log('[OCR DEBUG] Detected name from first line:', result.full_name);
+    } else {
+      console.log('[OCR DEBUG] First line did not look like a name:', firstLine);
+      
+      // Try to find a name in the first few lines
+      for (let i = 1; i < Math.min(lines.length, 4); i++) {
+        if (this.looksLikeName(lines[i])) {
+          result.full_name = this.cleanName(lines[i]);
+          console.log('[OCR DEBUG] Detected name from line', i + 1, ':', result.full_name);
+          break;
+        }
+      }
+      
+      // If still no name found, use the first line as fallback if it's not obviously non-name
+      if (!result.full_name && firstLine && !firstLine.includes('@') && !firstLine.includes('www')) {
+        result.full_name = this.cleanName(firstLine);
+        console.log('[OCR DEBUG] Using first line as fallback name:', result.full_name);
+      }
     }
 
     // Look for company indicators
@@ -177,15 +197,18 @@ export class OcrService {
     // Basic heuristics for name detection
     const words = line.trim().split(/\s+/);
     
-    // Should have 2-4 words
-    if (words.length < 2 || words.length > 4) return false;
+    // Should have 1-4 words (allow single names too)
+    if (words.length < 1 || words.length > 4) return false;
     
-    // Each word should start with a capital letter
-    if (!words.every(word => /^[A-Z]/.test(word))) return false;
+    // At least the first word should start with a capital letter
+    if (!/^[A-Z]/.test(words[0])) return false;
     
     // Should not contain common non-name words
-    const nonNameWords = ['inc', 'corp', 'llc', 'ltd', 'company', '@', 'www', '.com'];
+    const nonNameWords = ['inc', 'corp', 'llc', 'ltd', 'company', '@', 'www', '.com', 'phone', 'tel', 'email'];
     if (nonNameWords.some(word => line.toLowerCase().includes(word))) return false;
+    
+    // Should not be all numbers
+    if (/^\d+$/.test(line.replace(/\s/g, ''))) return false;
     
     return true;
   }
