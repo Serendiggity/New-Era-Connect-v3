@@ -68,7 +68,7 @@ export class ContactsService {
       conditions.push(
         and(
           eq(contacts.status, 'pending_review'),
-          sql`${contacts.ocrConfidence} < ${this.REVIEW_CONFIDENCE_THRESHOLD.toString()}`
+          sql`CAST(${contacts.ocrConfidence} AS DECIMAL) < ${this.REVIEW_CONFIDENCE_THRESHOLD}`
         )
       );
     }
