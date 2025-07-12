@@ -6,6 +6,7 @@ import 'express-async-errors';
 import { errorHandler } from './shared/middleware/error-handler.js';
 import { activityLogger } from './shared/middleware/activity-logger.js';
 import { eventsRouter } from './features/events/events.routes.js';
+import { contactsRouter } from './features/contacts/contacts.routes.js';
 
 const app = express();
 const PORT = process.env.API_PORT || 8002;
@@ -26,6 +27,7 @@ app.get('/api/health', (req, res) => {
 
 // Feature routes
 app.use('/api/events', eventsRouter);
+app.use('/api/contacts', contactsRouter);
 
 // Error handling (must be last)
 app.use(errorHandler);
