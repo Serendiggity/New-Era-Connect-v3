@@ -4,6 +4,19 @@ import { useContact, useDeleteContact, useUpdateContact } from '../api/contacts.
 import { Button, Card, LoadingSpinner } from '../../../shared/ui';
 import { getContactStatusDisplay, formatPhoneNumber, getContactInitials } from '../lib/contacts.utils';
 
+const statusClassMap: Record<string, string> = {
+  processing: 'bg-blue-100 text-blue-800',
+  completed: 'bg-green-100 text-green-800',
+  failed: 'bg-red-100 text-red-800',
+  pending_review: 'bg-yellow-100 text-yellow-800',
+  user_verified: 'bg-green-100 text-green-800',
+  default: 'bg-gray-100 text-gray-800',
+};
+
+const getStatusClasses = (status: string): string => {
+  return statusClassMap[status] || statusClassMap.default;
+};
+
 export function ContactDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -82,7 +95,7 @@ export function ContactDetail() {
                 {contact.company && <p className="text-gray-600">{contact.company}</p>}
               </div>
               
-              <span className={`inline-flex items-center gap-1 px-3 py-1 rounded text-sm ${`bg-${statusDisplay.color}-100`} ${`text-${statusDisplay.color}-800`}`}>
+              <span className={`inline-flex items-center gap-1 px-3 py-1 rounded text-sm ${getStatusClasses(contact.status)}`}>
                 <span>{statusDisplay.emoji}</span>
                 <span>{statusDisplay.label}</span>
               </span>
@@ -127,14 +140,16 @@ export function ContactDetail() {
                 )}
               </div>
 
-              {contact.event_id && (
-                <div>
-                  <h3 className="text-sm font-medium text-gray-500 mb-1">Event</h3>
+              <div>
+                <h3 className="text-sm font-medium text-gray-500 mb-1">Event</h3>
+                {contact.event_id ? (
                   <Link to={`/events/${contact.event_id}`} className="text-blue-600 hover:underline">
                     View Event
                   </Link>
-                </div>
-              )}
+                ) : (
+                  <span className="text-gray-400">No event associated</span>
+                )}
+              </div>
             </div>
           </div>
         </div>
