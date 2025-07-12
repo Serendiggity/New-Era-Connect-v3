@@ -28,11 +28,19 @@ export function ContactForm({ contact, eventId, onSubmit, onCancel }: ContactFor
     setIsSubmitting(true);
 
     try {
-      const submitData = contact
+      let submitData = contact
         ? { ...formData } // Update - all fields are optional
         : { ...formData, event_id: eventId! }; // Create - event_id is required
-      
-      await onSubmit(submitData);
+
+      // Remove empty optional fields (like linkedin_url) from submitData
+      const cleanedData = { ...submitData } as Record<string, unknown>;
+      Object.keys(cleanedData).forEach((key) => {
+        if (cleanedData[key] === "") {
+          delete cleanedData[key];
+        }
+      });
+
+      await onSubmit(cleanedData);
       navigate(contact ? `/contacts/${contact.id}` : '/contacts');
     } catch (error) {
       console.error('Error submitting contact:', error);
@@ -46,7 +54,7 @@ export function ContactForm({ contact, eventId, onSubmit, onCancel }: ContactFor
     if (onCancel) {
       onCancel();
     } else {
-      navigate(-1);
+      window.history.back();
     }
   };
 

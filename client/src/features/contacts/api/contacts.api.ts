@@ -34,36 +34,36 @@ const contactsApi = {
     if (filters?.search) params.append('search', filters.search);
     if (filters?.needsReview !== undefined) params.append('needsReview', filters.needsReview.toString());
     
-    const { data } = await apiClient.get<Contact[]>(`/contacts?${params}`);
+    const { data } = await apiClient.get<Contact[]>(`/api/contacts?${params}`);
     return data;
   },
 
   getById: async (id: number): Promise<Contact> => {
-    const { data } = await apiClient.get<Contact>(`/contacts/${id}`);
+    const { data } = await apiClient.get<Contact>(`/api/contacts/${id}`);
     return data;
   },
 
   getStats: async (): Promise<ContactStats> => {
-    const { data } = await apiClient.get<ContactStats>('/contacts/stats');
+    const { data } = await apiClient.get<ContactStats>('/api/contacts/stats');
     return data;
   },
 
   create: async (input: CreateContactInput): Promise<Contact> => {
-    const { data } = await apiClient.post<Contact>('/contacts', input);
+    const { data } = await apiClient.post<Contact>('/api/contacts', input);
     return data;
   },
 
   update: async ({ id, ...input }: UpdateContactInput & { id: number }): Promise<Contact> => {
-    const { data } = await apiClient.put<Contact>(`/contacts/${id}`, input);
+    const { data } = await apiClient.put<Contact>(`/api/contacts/${id}`, input);
     return data;
   },
 
   delete: async (id: number): Promise<void> => {
-    await apiClient.delete(`/contacts/${id}`);
+    await apiClient.delete(`/api/contacts/${id}`);
   },
 
   bulkUpdateStatus: async (contactIds: number[], status: ContactStatus): Promise<{ updated: number; contacts: Contact[] }> => {
-    const { data } = await apiClient.post<{ updated: number; contacts: Contact[] }>('/contacts/bulk-status', {
+    const { data } = await apiClient.post<{ updated: number; contacts: Contact[] }>('/api/contacts/bulk-status', {
       contactIds,
       status,
     });
@@ -71,7 +71,7 @@ const contactsApi = {
   },
 
   processOcrResult: async (id: number, ocrData: any, confidence: number): Promise<Contact> => {
-    const { data } = await apiClient.post<Contact>(`/contacts/${id}/ocr-result`, {
+    const { data } = await apiClient.post<Contact>(`/api/contacts/${id}/ocr-result`, {
       ocrData,
       confidence,
     });

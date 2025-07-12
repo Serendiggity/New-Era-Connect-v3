@@ -8,16 +8,16 @@ export const ContactStatusEnum = z.enum(['processing', 'completed', 'failed', 'p
 export type ContactStatus = z.infer<typeof ContactStatusEnum>;
 
 export const CreateContactSchema = z.object({
-  eventId: z.number().optional(),
-  fullName: z.string().min(1),
+  event_id: z.number().optional(),
+  full_name: z.string().min(1),
   email: z.string().email().optional(),
   company: z.string().optional(),
   title: z.string().optional(),
   phone: z.string().optional(),
-  linkedinUrl: z.string().url().optional(),
-  businessCardUrl: z.string().optional(),
-  ocrConfidence: z.number().min(0).max(1).optional(),
-  ocrRawData: z.any().optional(),
+  linkedin_url: z.string().url().optional(),
+  business_card_url: z.string().optional(),
+  ocr_confidence: z.number().min(0).max(1).optional(),
+  ocr_raw_data: z.any().optional(),
   status: ContactStatusEnum.optional().default('processing'),
 });
 
@@ -103,8 +103,8 @@ export class ContactsService {
     // Determine status based on OCR confidence
     let finalStatus = data.status || 'processing';
     
-    if (data.ocrConfidence !== undefined) {
-      if (data.ocrConfidence >= this.REVIEW_CONFIDENCE_THRESHOLD) {
+    if (data.ocr_confidence !== undefined) {
+      if (data.ocr_confidence >= this.REVIEW_CONFIDENCE_THRESHOLD) {
         finalStatus = 'completed';
       } else {
         finalStatus = 'pending_review';
@@ -114,26 +114,26 @@ export class ContactsService {
     const [newContact] = await db
       .insert(contacts)
       .values({
-        eventId: data.eventId,
-        fullName: data.fullName,
+        eventId: data.event_id,
+        fullName: data.full_name,
         email: data.email,
         company: data.company,
         title: data.title,
         phone: data.phone,
-        linkedinUrl: data.linkedinUrl,
-        businessCardUrl: data.businessCardUrl,
-        ocrConfidence: data.ocrConfidence?.toString(),
-        ocrRawData: data.ocrRawData,
+        linkedinUrl: data.linkedin_url,
+        businessCardUrl: data.business_card_url,
+        ocrConfidence: data.ocr_confidence?.toString(),
+        ocrRawData: data.ocr_raw_data,
         status: finalStatus,
-        processedAt: data.ocrConfidence !== undefined ? new Date() : undefined,
+        processedAt: data.ocr_confidence !== undefined ? new Date() : undefined,
       })
       .returning();
 
     // Log activity
     await this.logActivity('contact_created', 'contact', newContact.id, {
-      eventId: data.eventId,
+      event_id: data.event_id,
       status: finalStatus,
-      ocrConfidence: data.ocrConfidence,
+      ocr_confidence: data.ocr_confidence,
     });
 
     return newContact;
@@ -148,16 +148,16 @@ export class ContactsService {
       data.status === 'user_verified';
 
     const updateData: any = {
-      eventId: data.eventId,
-      fullName: data.fullName,
+      eventId: data.event_id,
+      fullName: data.full_name,
       email: data.email,
       company: data.company,
       title: data.title,
       phone: data.phone,
-      linkedinUrl: data.linkedinUrl,
-      businessCardUrl: data.businessCardUrl,
-      ocrConfidence: data.ocrConfidence?.toString(),
-      ocrRawData: data.ocrRawData,
+      linkedinUrl: data.linkedin_url,
+      businessCardUrl: data.business_card_url,
+      ocrConfidence: data.ocr_confidence?.toString(),
+      ocrRawData: data.ocr_raw_data,
       status: data.status,
       updatedAt: new Date(),
     };
