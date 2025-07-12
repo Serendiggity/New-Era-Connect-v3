@@ -14,7 +14,9 @@
     "db:assess": "tsx src/scripts/db-assessment.ts",
     "db:clean": "tsx src/scripts/db-cleanup.ts",
     "db:migrate": "tsx src/scripts/db-migrate.ts",
-    "db:test": "tsx src/scripts/db-test.ts"
+    "db:test": "tsx src/scripts/db-test.ts",
+    "storage:setup": "tsx src/scripts/setup-storage.ts",
+    "storage:debug": "tsx src/scripts/debug-upload.ts"
   },
   "dependencies": {
     "@business-card-manager/shared": "workspace:*",
@@ -24,10 +26,10 @@
     "drizzle-orm": "^0.29.3",
     "express": "^4.18.2",
     "express-async-errors": "^3.1.1",
+    "multer": "1.4.5-lts.2",
     "openai": "^4.24.7",
     "postgres": "^3.4.7",
     "tesseract.js": "^5.0.4",
-    "multer": "^1.4.5-lts.1",
     "zod": "^3.22.4"
   },
   "devDependencies": {

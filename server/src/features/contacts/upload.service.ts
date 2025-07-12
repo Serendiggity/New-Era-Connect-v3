@@ -8,7 +8,11 @@ const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_ANON_KEY;
 
 if (!supabaseUrl || !supabaseKey) {
-  throw new Error('Missing required Supabase environment variables');
+  console.error('Upload Service Environment Check:');
+  console.error('SUPABASE_URL:', supabaseUrl ? 'Set' : 'Missing');
+  console.error('SUPABASE_ANON_KEY:', supabaseKey ? 'Set' : 'Missing');
+  console.error('Available env vars:', Object.keys(process.env).filter(key => key.includes('SUPABASE')));
+  throw new Error('Missing required Supabase environment variables: SUPABASE_URL and/or SUPABASE_ANON_KEY');
 }
 
 const supabase = createClient(supabaseUrl, supabaseKey);

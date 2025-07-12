@@ -20,10 +20,15 @@ export default function NewContactPage() {
       const result = await uploadBusinessCard.mutateAsync({ file, contactData });
       setUploadSuccess(true);
       
-      // Navigate to the new contact after a brief success message
+      // Show success message and redirect to contacts list with processing info
       setTimeout(() => {
-        navigate(`/contacts/${result.contact.id}`);
-      }, 2000);
+        navigate('/contacts', { 
+          state: { 
+            message: `Business card uploaded! Contact "${result.contact.full_name || 'New Contact'}" is being processed.`,
+            newContactId: result.contact.id 
+          }
+        });
+      }, 1500);
     } catch (error: any) {
       setUploadError(error.response?.data?.error || 'Failed to upload business card');
       setUploadSuccess(false);

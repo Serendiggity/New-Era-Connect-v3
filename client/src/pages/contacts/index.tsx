@@ -1,10 +1,28 @@
-import React from 'react';
-import { Link } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { Link, useLocation } from 'react-router-dom';
 import { ContactList, useContactStats } from '../../features/contacts';
 import { Button, LoadingSpinner } from '../../shared/ui';
+import { CheckCircle, X } from 'lucide-react';
 
 export default function ContactsPage() {
   const { data: stats, isLoading: statsLoading } = useContactStats();
+  const location = useLocation();
+  const [showMessage, setShowMessage] = useState(false);
+  const [message, setMessage] = useState('');
+
+  // Show success message from navigation state
+  useEffect(() => {
+    if (location.state?.message) {
+      setMessage(location.state.message);
+      setShowMessage(true);
+      
+      // Clear the state to prevent showing again on refresh
+      window.history.replaceState({}, '', location.pathname);
+      
+      // Auto-hide after 5 seconds
+      setTimeout(() => setShowMessage(false), 5000);
+    }
+  }, [location]);
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -15,6 +33,22 @@ export default function ContactsPage() {
             <Button>Add Contact</Button>
           </Link>
         </div>
+
+        {/* Success message */}
+        {showMessage && (
+          <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <CheckCircle className="h-5 w-5 text-green-600" />
+              <span className="text-green-800">{message}</span>
+            </div>
+            <button
+              onClick={() => setShowMessage(false)}
+              className="text-green-600 hover:text-green-800"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        )}
 
         {/* Stats cards */}
         {statsLoading ? (

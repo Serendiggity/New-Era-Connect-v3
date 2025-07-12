@@ -93,11 +93,7 @@ const contactsApi = {
       formData.append('full_name', contactData.full_name);
     }
 
-    const { data } = await apiClient.post('/api/contacts/upload', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
+    const { data } = await apiClient.post('/api/contacts/upload', formData);
     return data;
   },
 
@@ -109,11 +105,7 @@ const contactsApi = {
     const formData = new FormData();
     formData.append('businessCard', file);
 
-    const { data } = await apiClient.post(`/api/contacts/${contactId}/upload`, formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
+    const { data } = await apiClient.post(`/api/contacts/${contactId}/upload`, formData);
     return data;
   },
 

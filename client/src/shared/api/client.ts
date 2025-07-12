@@ -1,7 +1,7 @@
 import { ApiResponse } from '@business-card-manager/shared';
 
 // Get API URL from environment variables
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8001';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 export class ApiError extends Error {
   constructor(
@@ -29,7 +29,6 @@ export class ApiClient {
     
     const config: RequestInit = {
       headers: {
-        'Content-Type': 'application/json',
         ...options.headers,
       },
       ...options,
@@ -68,10 +67,19 @@ export class ApiClient {
     });
   }
 
-  async post<T>(endpoint: string, data?: any): Promise<ApiResponse<T>> {
+  async post<T>(endpoint: string, data?: any, options?: RequestInit): Promise<ApiResponse<T>> {
+    // Handle FormData separately (don't JSON.stringify it)
+    const isFormData = data instanceof FormData;
+    
     return this.request<ApiResponse<T>>(endpoint, {
       method: 'POST',
-      body: data ? JSON.stringify(data) : undefined,
+      body: isFormData ? data : (data ? JSON.stringify(data) : undefined),
+      ...options,
+      headers: {
+        // Don't set Content-Type for FormData (browser will set it with boundary)
+        ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
+        ...options?.headers,
+      },
     });
   }
 
