@@ -13,7 +13,7 @@ export interface CreateEventData {
 
 export class EventsService {
   static async getAll() {
-    return await db.select().from(events).orderBy(events.createdAt);
+    return await db.select().from(events).orderBy(events.created_at);
   }
 
   static async getById(id: number) {
@@ -38,7 +38,7 @@ export class EventsService {
       .update(events)
       .set({ 
         ...data, 
-        updatedAt: new Date() 
+        updated_at: new Date() 
       })
       .where(eq(events.id, id))
       .returning();

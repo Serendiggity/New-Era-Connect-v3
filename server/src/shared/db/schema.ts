@@ -21,8 +21,8 @@ export const events = pgTable('events', {
   location: varchar('location', { length: 255 }),
   industry: varchar('industry', { length: 100 }),
   description: text('description'),
-  createdAt: timestamp('created_at').defaultNow(),
-  updatedAt: timestamp('updated_at').defaultNow(),
+  created_at: timestamp('created_at').defaultNow(),
+  updated_at: timestamp('updated_at').defaultNow(),
 });
 
 // Contacts table

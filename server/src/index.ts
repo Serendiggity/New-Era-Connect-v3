@@ -11,10 +11,7 @@ const app = express();
 const PORT = process.env.API_PORT || 8002;
 
 // Middleware
-app.use(cors({
-  origin: [`http://localhost:${process.env.PORT || 3002}`, 'http://localhost:3000'],
-  credentials: true,
-}));
+app.use(cors()); // Simple - allows all origins for development
 app.use(express.json());
 app.use(activityLogger);
 
