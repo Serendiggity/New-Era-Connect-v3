@@ -10,6 +10,15 @@ interface ContactCardProps {
   onDelete?: () => void;
 }
 
+const statusClassMap: Record<string, string> = {
+  processing: 'bg-blue-100 text-blue-800',
+  completed: 'bg-green-100 text-green-800',
+  failed: 'bg-red-100 text-red-800',
+  pending_review: 'bg-yellow-100 text-yellow-800',
+  user_verified: 'bg-green-100 text-green-800',
+  default: 'bg-gray-100 text-gray-800',
+};
+
 export function ContactCard({ contact, onEdit, onDelete }: ContactCardProps) {
   const statusDisplay = getContactStatusDisplay(contact.status);
   const initials = getContactInitials(contact.full_name);
@@ -50,7 +59,7 @@ export function ContactCard({ contact, onEdit, onDelete }: ContactCardProps) {
             </div>
 
             {/* Status badge */}
-            <span className={`inline-flex items-center gap-1 px-2 py-1 rounded text-sm ${`bg-${statusDisplay.color}-100`} ${`text-${statusDisplay.color}-800`} flex-shrink-0`}>
+            <span className={`inline-flex items-center gap-1 px-2 py-1 rounded text-sm flex-shrink-0 ${statusClassMap[contact.status] || statusClassMap.default}`}>
               <span>{statusDisplay.emoji}</span>
               <span>{statusDisplay.label}</span>
             </span>

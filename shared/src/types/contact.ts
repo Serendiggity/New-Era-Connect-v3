@@ -8,7 +8,7 @@ export type ContactStatus =
   | 'user_verified';
 
 export interface Contact extends BaseEntity {
-  event_id: ID;
+  event_id?: ID;
   full_name: string;
   email?: string;
   company?: string;
