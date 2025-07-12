@@ -13,7 +13,9 @@ export default function NewContactPage() {
       <ContactForm
         eventId={eventId}
         onSubmit={async (data) => {
-          await createContact.mutateAsync(data as any);
+          // Only pass CreateContactInput to createContact.mutateAsync
+          const { full_name, email, company, title, phone, linkedin_url, business_card_url, event_id } = data as any;
+          await createContact.mutateAsync({ full_name, email, company, title, phone, linkedin_url, business_card_url, event_id });
         }}
       />
     </div>

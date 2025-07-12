@@ -82,7 +82,7 @@ export function ContactDetail() {
                 {contact.company && <p className="text-gray-600">{contact.company}</p>}
               </div>
               
-              <span className={`inline-flex items-center gap-1 px-3 py-1 rounded text-sm bg-${statusDisplay.color}-100 text-${statusDisplay.color}-800`}>
+              <span className={`inline-flex items-center gap-1 px-3 py-1 rounded text-sm ${`bg-${statusDisplay.color}-100`} ${`text-${statusDisplay.color}-800`}`}>
                 <span>{statusDisplay.emoji}</span>
                 <span>{statusDisplay.label}</span>
               </span>

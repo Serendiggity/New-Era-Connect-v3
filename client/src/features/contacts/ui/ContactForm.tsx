@@ -30,7 +30,9 @@ export function ContactForm({ contact, eventId, onSubmit, onCancel }: ContactFor
     try {
       let submitData = contact
         ? { ...formData } // Update - all fields are optional
-        : { ...formData, event_id: eventId! }; // Create - event_id is required
+        : eventId !== undefined
+          ? { ...formData, event_id: String(eventId) }
+          : { ...formData }; // Create - event_id is optional
 
       // Remove empty optional fields (like linkedin_url) from submitData
       const cleanedData = { ...submitData } as Record<string, unknown>;

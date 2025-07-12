@@ -161,7 +161,7 @@ export function ContactList({ eventId, onContactSelect }: ContactListProps) {
                   </td>
                   <td className="px-3 py-2 text-sm">{formatPhoneNumber(contact.phone) || '-'}</td>
                   <td className="px-3 py-2">
-                    <span className={`inline-flex items-center gap-1 px-2 py-1 rounded text-sm bg-${statusDisplay.color}-100 text-${statusDisplay.color}-800`}>
+                    <span className={`inline-flex items-center gap-1 px-2 py-1 rounded text-sm ${`bg-${statusDisplay.color}-100`} ${`text-${statusDisplay.color}-800`}`}>
                       <span>{statusDisplay.emoji}</span>
                       <span>{statusDisplay.label}</span>
                     </span>

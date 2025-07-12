@@ -28,7 +28,7 @@ export interface Contact extends BaseEntity {
 }
 
 export interface CreateContactInput {
-  event_id: ID;
+  event_id?: ID;
   full_name: string;
   email?: string;
   company?: string;

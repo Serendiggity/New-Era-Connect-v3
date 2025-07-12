@@ -18,7 +18,7 @@ export default function EditContactPage() {
       <ContactForm
         contact={contact}
         onSubmit={async (data) => {
-          await updateContact.mutateAsync({ ...data, id: contactId } as any);
+          await updateContact.mutateAsync({ ...data, id: contactId });
         }}
       />
     </div>

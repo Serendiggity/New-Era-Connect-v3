@@ -50,7 +50,7 @@ export function ContactCard({ contact, onEdit, onDelete }: ContactCardProps) {
             </div>
 
             {/* Status badge */}
-            <span className={`inline-flex items-center gap-1 px-2 py-1 rounded text-sm bg-${statusDisplay.color}-100 text-${statusDisplay.color}-800 flex-shrink-0`}>
+            <span className={`inline-flex items-center gap-1 px-2 py-1 rounded text-sm ${`bg-${statusDisplay.color}-100`} ${`text-${statusDisplay.color}-800`} flex-shrink-0`}>
               <span>{statusDisplay.emoji}</span>
               <span>{statusDisplay.label}</span>
             </span>

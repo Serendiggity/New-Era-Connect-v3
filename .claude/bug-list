@@ -1,0 +1,24 @@
+Feature/feat: implement contacts management with full CRUD operations #1 Pull Request
+Bugs Found: 
+
+
+Bug: Tailwind Purge Ignores Template Literal Classes
+Dynamic Tailwind CSS classes constructed with template literals (e.g., bg-${color}-100) are not statically analyzable by Tailwind's purging process. This causes the styles to be purged from the final CSS bundle, resulting in unstyled status badges and other elements in the ContactDetail, ContactList, and ContactCard components.
+
+client/src/features/contacts/ui/ContactCard.tsx#L52-L53
+client/src/features/contacts/ui/ContactList.tsx#L163-L167
+client/src/features/contacts/ui/ContactDetail.tsx#L84-L85
+Fix in Cursor • Fix in Web
+
+Bug: Unsafe Type Assertions Cause Runtime Errors
+The as any type assertion bypasses TypeScript's type safety when calling createContact.mutateAsync and updateContact.mutateAsync. This can lead to runtime errors if the submitted data does not match the expected API contract.
+
+client/src/pages/contacts/new.tsx#L15-L16
+client/src/pages/contacts/edit.tsx#L20-L21
+Fix in Cursor • Fix in Web
+
+Bug: Contact Form Fails When Event ID Is Undefined
+The ContactForm component uses the non-null assertion operator (!) on the optional eventId prop when creating a new contact. If eventId is undefined, this results in undefined being passed as event_id to the API, which can cause contact creation to fail or lead to invalid data.
+
+client/src/features/contacts/ui/ContactForm.tsx#L31-L33
+Fix in Cursor • Fix in Web
