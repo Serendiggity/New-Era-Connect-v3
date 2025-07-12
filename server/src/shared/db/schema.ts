@@ -28,7 +28,7 @@ export const events = pgTable('events', {
 // Contacts table
 export const contacts = pgTable('contacts', {
   id: serial('id').primaryKey(),
-  eventId: integer('event_id'),
+  eventId: integer('event_id').references(() => events.id, { onDelete: 'set null' }),
   fullName: varchar('full_name', { length: 255 }).notNull(),
   email: varchar('email', { length: 255 }),
   company: varchar('company', { length: 255 }),
