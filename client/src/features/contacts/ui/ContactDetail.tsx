@@ -16,7 +16,6 @@ const statusClassMap: Record<string, string> = {
 const getStatusClasses = (status: string): string => {
   return statusClassMap[status] || statusClassMap.default;
 };
-
 export function ContactDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();

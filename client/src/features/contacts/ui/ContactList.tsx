@@ -64,7 +64,6 @@ export function ContactList({ eventId, onContactSelect }: ContactListProps) {
     user_verified: 'bg-green-100 text-green-800',
     default: 'bg-gray-100 text-gray-800',
   };
-
   return (
     <div className="space-y-4">
       {/* Filters */}
