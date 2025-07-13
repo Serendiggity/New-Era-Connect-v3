@@ -39,6 +39,7 @@ export interface CreateContactInput {
   phone?: string;
   linkedin_url?: string;
   business_card_url?: string;
+  status?: ContactStatus;
 }
 
 export interface UpdateContactInput extends Partial<Omit<Contact, keyof BaseEntity | 'event_id'>> {}

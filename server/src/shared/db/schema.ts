@@ -45,7 +45,7 @@ export const contacts = pgTable('contacts', {
   userModifiedFields: jsonb('user_modified_fields').default('{}'),
   
   // Processing tracking
-  status: varchar('status', { length: 20 }).default('processing'),
+  status: varchar('status', { length: 20 }).default('user_verified'),
   processedAt: timestamp('processed_at'),
   reviewedAt: timestamp('reviewed_at'),
   

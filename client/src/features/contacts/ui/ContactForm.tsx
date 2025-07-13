@@ -50,7 +50,6 @@ export function ContactForm({ contact, eventId, onSubmit, onCancel, skipNavigati
         }
       });
 
-      console.log('Submitting contact data:', cleanedData);
       await onSubmit(cleanedData);
       
       // Only navigate if not explicitly skipped by parent

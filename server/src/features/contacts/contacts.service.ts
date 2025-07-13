@@ -38,7 +38,29 @@ export type CreateContactInput = z.infer<typeof CreateContactSchema>;
 export type UpdateContactInput = z.infer<typeof UpdateContactSchema>;
 export type ContactFilters = z.infer<typeof ContactFiltersSchema>;
 
-// Service class
+/**
+ * Contact Creation Status Rules:
+ * 
+ * Manual Entry:
+ * - Respects user status selection from form
+ * - Defaults to 'user_verified' if no status provided
+ * - Allows any status (user might mark incomplete data as 'processing')
+ * 
+ * OCR Upload:
+ * - Ignores user status selection (confidence algorithm takes precedence)
+ * - Uses confidence-based algorithm:
+ *   - >= 70% confidence → 'completed'
+ *   - < 70% confidence → 'pending_review'
+ * - Business card uploads start as 'processing' then get updated via OCR job
+ * 
+ * Status State Machine:
+ * - processing → completed (high confidence OCR)
+ * - processing → pending_review (low confidence OCR)
+ * - processing → failed (OCR failure)
+ * - pending_review → user_verified (user approves)
+ * - user_verified → [terminal state]
+ * - completed → user_verified (user can manually verify)
+ */
 export class ContactsService {
   private readonly userId = 1; // Hard-coded for single-user MVP
   private readonly REVIEW_CONFIDENCE_THRESHOLD = 0.7;
@@ -103,23 +125,20 @@ export class ContactsService {
   }
 
   async create(data: CreateContactInput) {
-    // Determine status based on whether this is OCR or manual entry
-    let finalStatus = data.status;
+    console.log('CREATE CONTACT CALLED with data:', JSON.stringify(data, null, 2));
+    
+    // For OCR-based creation, determine status by confidence
+    let statusOverride: ContactStatus | undefined;
     
     if (data.ocr_confidence !== undefined) {
-      // OCR-based contact - determine status by confidence
-      if (data.ocr_confidence >= this.REVIEW_CONFIDENCE_THRESHOLD) {
-        finalStatus = 'completed';
-      } else {
-        finalStatus = 'pending_review';
-      }
-    } else {
-      // Manual entry - default to user_verified unless explicitly set
-      finalStatus = finalStatus || 'user_verified';
+      statusOverride = data.ocr_confidence >= this.REVIEW_CONFIDENCE_THRESHOLD 
+        ? 'completed' 
+        : 'pending_review';
     }
+    // For manual creation, let database default handle it or use user input
 
     // Convert API data to database format
-    const dbData = mapContactApiToDb({
+    const apiDataForMapping: any = {
       event_id: data.event_id,
       full_name: data.full_name,
       email: data.email,
@@ -131,9 +150,17 @@ export class ContactsService {
       ocr_confidence: data.ocr_confidence,
       ocr_raw_data: data.ocr_raw_data,
       user_modified_fields: data.user_modified_fields || {},
-      status: finalStatus,
       processed_at: data.ocr_confidence !== undefined ? new Date() : undefined,
-    });
+    };
+    
+    // Only set status if we have an override or explicit user input
+    if (statusOverride || data.status) {
+      apiDataForMapping.status = statusOverride || data.status;
+    }
+    
+    const dbData = mapContactApiToDb(apiDataForMapping);
+    
+    console.log('DEBUG: Final dbData being inserted:', JSON.stringify(dbData, null, 2));
 
     // Ensure ocr_confidence is stored as string in database
     if (dbData.ocrConfidence !== undefined) {
@@ -148,7 +175,7 @@ export class ContactsService {
     // Log activity
     await this.logActivity('contact_created', 'contact', newContact.id, {
       event_id: data.event_id,
-      status: finalStatus,
+      status: newContact.status,
       ocr_confidence: data.ocr_confidence,
       user_modified_fields: data.user_modified_fields,
     });

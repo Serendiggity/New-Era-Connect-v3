@@ -80,7 +80,9 @@ router.get('/:id', async (req, res) => {
 // POST /api/contacts - Create new contact
 router.post('/', async (req, res) => {
   try {
+    console.log('ROUTE: POST /contacts called with body:', JSON.stringify(req.body, null, 2));
     const data = CreateContactSchema.parse(req.body);
+    console.log('ROUTE: Parsed data:', JSON.stringify(data, null, 2));
     const contact = await contactsService.create(data);
     res.status(201).json({ data: contact });
   } catch (error) {
