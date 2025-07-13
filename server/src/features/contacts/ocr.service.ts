@@ -1,5 +1,6 @@
 import Tesseract from 'tesseract.js';
 import { z } from 'zod';
+import { openaiClassificationService } from './openai-classification.service.js';
 
 // OCR result validation schema
 export const OcrResultSchema = z.object({
@@ -19,7 +20,7 @@ export const OcrResultSchema = z.object({
 
 export type OcrResult = z.infer<typeof OcrResultSchema>;
 
-// Parsed contact data from OCR
+// Parsed contact data from OCR with field-level confidence
 export interface ParsedContactData {
   full_name?: string;
   email?: string;
@@ -27,7 +28,15 @@ export interface ParsedContactData {
   title?: string;
   phone?: string;
   linkedin_url?: string;
-  confidence: number;
+  confidence: number; // Overall confidence
+  field_confidence?: { // Field-level confidence scores
+    full_name?: number;
+    email?: number;
+    company?: number;
+    title?: number;
+    phone?: number;
+    linkedin_url?: number;
+  };
   raw_text: string;
   raw_data: any;
 }
@@ -81,100 +90,301 @@ export class OcrService {
     const text = ocrResult.text;
     const lines = text.split('\n').map(line => line.trim()).filter(line => line.length > 0);
     
+    console.log('[OCR DEBUG] Raw OCR text:', JSON.stringify(text));
     console.log('[OCR DEBUG] OCR lines:', lines);
     
     const result: ParsedContactData = {
       confidence: ocrResult.confidence,
+      field_confidence: {},
       raw_text: text,
       raw_data: ocrResult,
     };
 
-    // Extract email using regex
-    const emailRegex = /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/;
-    const emailMatch = text.match(emailRegex);
-    if (emailMatch) {
-      result.email = emailMatch[0].toLowerCase();
+    // Extract email with confidence scoring
+    const emailData = this.extractEmailWithConfidence(text, ocrResult.words);
+    if (emailData) {
+      result.email = emailData.value;
+      result.field_confidence!.email = emailData.confidence;
     }
 
-    // Extract phone number using regex (supports various formats)
-    const phoneRegex = /(?:\+?1[-.\s]?)?\(?([0-9]{3})\)?[-.\s]?([0-9]{3})[-.\s]?([0-9]{4})/;
-    const phoneMatch = text.match(phoneRegex);
-    if (phoneMatch) {
-      result.phone = phoneMatch[0];
+    // Extract phone with confidence scoring
+    const phoneData = this.extractPhoneWithConfidence(text, ocrResult.words);
+    if (phoneData) {
+      result.phone = phoneData.value;
+      result.field_confidence!.phone = phoneData.confidence;
     }
 
-    // Extract LinkedIn URL
-    const linkedinRegex = /(?:linkedin\.com\/in\/|linkedin\.com\/pub\/)([\w\-_]+)/i;
-    const linkedinMatch = text.match(linkedinRegex);
-    if (linkedinMatch) {
-      result.linkedin_url = `https://linkedin.com/in/${linkedinMatch[1]}`;
+    // Extract LinkedIn with confidence scoring
+    const linkedinData = this.extractLinkedInWithConfidence(text, ocrResult.words);
+    if (linkedinData) {
+      result.linkedin_url = linkedinData.value;
+      result.field_confidence!.linkedin_url = linkedinData.confidence;
     }
 
-    // Parse structured data from lines
-    this.parseNameAndCompany(lines, result);
-    this.parseTitle(lines, result);
+    // Parse structured data from lines with confidence
+    this.parseNameAndCompanyWithConfidence(lines, result, ocrResult.words);
+    this.parseTitleWithConfidence(lines, result, ocrResult.words);
+
+    console.log('[OCR DEBUG] Field confidence scores:', result.field_confidence);
 
     return result;
   }
 
   /**
-   * Parse name and company from OCR lines using heuristics
+   * Extract email with confidence based on OCR word confidence
    */
-  private parseNameAndCompany(lines: string[], result: ParsedContactData): void {
+  private extractEmailWithConfidence(text: string, words: any[]): {value: string, confidence: number} | null {
+    const emailRegex = /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/;
+    const emailMatch = text.match(emailRegex);
+    
+    if (!emailMatch) return null;
+    
+    const email = emailMatch[0].toLowerCase();
+    
+    // Calculate confidence based on OCR word confidence for email components
+    const emailWords = words.filter(word => 
+      emailMatch[0].includes(word.text) || word.text.includes('@')
+    );
+    
+    const avgConfidence = emailWords.length > 0 
+      ? emailWords.reduce((sum, word) => sum + word.confidence, 0) / emailWords.length
+      : 0.5;
+    
+    // Boost confidence for valid email patterns
+    const domainConfidence = /.+@.+\..+/.test(email) ? 0.2 : 0;
+    
+    return {
+      value: email,
+      confidence: Math.min(0.95, avgConfidence + domainConfidence)
+    };
+  }
+
+  /**
+   * Extract phone with confidence based on OCR word confidence
+   */
+  private extractPhoneWithConfidence(text: string, words: any[]): {value: string, confidence: number} | null {
+    const phoneRegex = /(?:\+?1[-.\s]?)?\(?([0-9]{3})\)?[-.\s]?([0-9]{3})[-.\s]?([0-9]{4})/;
+    const phoneMatch = text.match(phoneRegex);
+    
+    if (!phoneMatch) return null;
+    
+    // Find OCR words that likely contain phone digits
+    const phoneWords = words.filter(word => 
+      /\d/.test(word.text) && phoneMatch[0].includes(word.text.replace(/\D/g, ''))
+    );
+    
+    const avgConfidence = phoneWords.length > 0 
+      ? phoneWords.reduce((sum, word) => sum + word.confidence, 0) / phoneWords.length
+      : 0.5;
+    
+    // Boost confidence for complete 10-digit numbers
+    const formatConfidence = /^\+?1?[-.\s]?\(?[0-9]{3}\)?[-.\s]?[0-9]{3}[-.\s]?[0-9]{4}$/.test(phoneMatch[0]) ? 0.1 : 0;
+    
+    return {
+      value: phoneMatch[0],
+      confidence: Math.min(0.95, avgConfidence + formatConfidence)
+    };
+  }
+
+  /**
+   * Extract LinkedIn URL with confidence
+   */
+  private extractLinkedInWithConfidence(text: string, words: any[]): {value: string, confidence: number} | null {
+    const linkedinRegex = /(?:linkedin\.com\/in\/|linkedin\.com\/pub\/)([\w\-_]+)/i;
+    const linkedinMatch = text.match(linkedinRegex);
+    
+    if (!linkedinMatch) return null;
+    
+    // Find words that contain linkedin components
+    const linkedinWords = words.filter(word => 
+      word.text.toLowerCase().includes('linkedin') || 
+      word.text.toLowerCase().includes('in/') ||
+      linkedinMatch[1].includes(word.text)
+    );
+    
+    const avgConfidence = linkedinWords.length > 0 
+      ? linkedinWords.reduce((sum, word) => sum + word.confidence, 0) / linkedinWords.length
+      : 0.7; // Default confidence for detected URLs
+    
+    return {
+      value: `https://linkedin.com/in/${linkedinMatch[1]}`,
+      confidence: avgConfidence
+    };
+  }
+
+  /**
+   * Parse name and company from OCR lines using enhanced multi-pass analysis
+   */
+  private parseNameAndCompanyWithConfidence(lines: string[], result: ParsedContactData, words: any[]): void {
     if (lines.length === 0) return;
 
-    // First line is often the name if it looks like a person's name
-    const firstLine = lines[0];
-    if (this.looksLikeName(firstLine)) {
-      result.full_name = this.cleanName(firstLine);
-      console.log('[OCR DEBUG] Detected name from first line:', result.full_name);
-    } else {
-      console.log('[OCR DEBUG] First line did not look like a name:', firstLine);
+    console.log('[OCR DEBUG] Starting enhanced name/company parsing for', lines.length, 'lines');
+    
+    // PASS 1: Identify high-confidence names using enhanced detection
+    const nameCandidates: Array<{line: string, index: number, confidence: number}> = [];
+    
+    lines.forEach((line, index) => {
+      if (this.looksLikeName(line)) {
+        // Calculate name confidence based on position and characteristics
+        let confidence = 0.5; // Base confidence
+        
+        // First few lines are more likely to be names
+        if (index === 0) confidence += 0.3;
+        else if (index === 1) confidence += 0.2;
+        else if (index === 2) confidence += 0.1;
+        
+        // Boost confidence for name patterns
+        const namePatterns = [
+          /^[A-Z][a-z]+ [A-Z][a-z]+$/, // First Last
+          /^[A-Z][a-z]+ [A-Z]\. [A-Z][a-z]+$/, // First M. Last
+          /^Dr\.|Mr\.|Mrs\.|Ms\./ // With title
+        ];
+        
+        if (namePatterns.some(pattern => pattern.test(line))) {
+          confidence += 0.2;
+        }
+        
+        // Reduce confidence if line has business indicators
+        const businessIndicators = ['sales', 'manager', 'director', 'ceo', 'president'];
+        if (businessIndicators.some(indicator => line.toLowerCase().includes(indicator))) {
+          confidence -= 0.3;
+        }
+        
+        nameCandidates.push({ line, index, confidence });
+        console.log('[OCR DEBUG] Name candidate:', line, 'confidence:', confidence);
+      }
+    });
+    
+    // PASS 2: Select best name candidate
+    if (nameCandidates.length > 0) {
+      const bestCandidate = nameCandidates.reduce((best, current) => 
+        current.confidence > best.confidence ? current : best
+      );
       
-      // Try to find a name in the first few lines
-      for (let i = 1; i < Math.min(lines.length, 4); i++) {
-        if (this.looksLikeName(lines[i])) {
-          result.full_name = this.cleanName(lines[i]);
-          console.log('[OCR DEBUG] Detected name from line', i + 1, ':', result.full_name);
+      if (bestCandidate.confidence > 0.6) {
+        result.full_name = this.cleanName(bestCandidate.line);
+        result.field_confidence!.full_name = bestCandidate.confidence;
+        console.log('[OCR DEBUG] Selected high-confidence name:', result.full_name, 'confidence:', bestCandidate.confidence);
+      }
+    }
+    
+    // PASS 3: Fallback name detection if no high-confidence name found
+    if (!result.full_name) {
+      console.log('[OCR DEBUG] No high-confidence name found, trying fallback methods');
+      
+      // Try more permissive detection on first few lines
+      for (let i = 0; i < Math.min(lines.length, 3); i++) {
+        const line = lines[i];
+        
+        // Skip obvious non-names
+        if (this.isDefinitelyNotName(line)) continue;
+        
+        // Check if it could be a name (more permissive)
+        if (this.couldBeName(line)) {
+          result.full_name = this.cleanName(line);
+          result.field_confidence!.full_name = 0.4; // Lower confidence for fallback
+          console.log('[OCR DEBUG] Using permissive fallback name:', result.full_name);
           break;
         }
       }
       
-      // If still no name found, use the first line as fallback if it's not obviously non-name
-      if (!result.full_name && firstLine && !firstLine.includes('@') && !firstLine.includes('www')) {
-        result.full_name = this.cleanName(firstLine);
-        console.log('[OCR DEBUG] Using first line as fallback name:', result.full_name);
+      // Last resort: generate from email
+      if (!result.full_name && result.email) {
+        result.full_name = this.generateNameFromEmail(result.email);
+        result.field_confidence!.full_name = 0.3; // Low confidence for generated names
+        console.log('[OCR DEBUG] Generated name from email:', result.full_name);
+      }
+      
+      // Final fallback
+      if (!result.full_name) {
+        result.full_name = 'Contact';
+        result.field_confidence!.full_name = 0.1; // Very low confidence for generic names
+        console.log('[OCR DEBUG] Using generic fallback name');
       }
     }
 
-    // Look for company indicators
-    const companyKeywords = ['inc', 'corp', 'llc', 'ltd', 'company', 'co.', 'technologies', 'solutions', 'group'];
+    // PASS 4: Enhanced company detection
+    this.parseCompany(lines, result);
+  }
+
+  /**
+   * Check if a line is definitely not a name (strict)
+   */
+  private isDefinitelyNotName(line: string): boolean {
+    const lower = line.toLowerCase();
+    const definitelyNot = [
+      '@', 'www', '.com', 'phone', 'tel', 'email', 'fax',
+      'inc', 'corp', 'llc', 'ltd', 'company'
+    ];
+    return definitelyNot.some(indicator => lower.includes(indicator)) ||
+           /^\+?[\d\s\-\(\)]+$/.test(line); // Phone number pattern
+  }
+
+  /**
+   * Check if a line could possibly be a name (permissive for fallback)
+   */
+  private couldBeName(line: string): boolean {
+    const trimmed = line.trim();
+    if (trimmed.length < 2 || trimmed.length > 60) return false;
+    
+    const words = trimmed.split(/\s+/);
+    if (words.length > 4) return false;
+    
+    // Must start with capital and contain letters
+    return /^[A-Z]/.test(trimmed) && /[a-zA-Z]/.test(trimmed);
+  }
+
+  /**
+   * Generate a readable name from email address
+   */
+  private generateNameFromEmail(email: string): string {
+    const prefix = email.split('@')[0];
+    return prefix
+      .replace(/[._-]/g, ' ')
+      .split(' ')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(' ');
+  }
+
+  /**
+   * Enhanced company detection with confidence scoring
+   */
+  private parseCompany(lines: string[], result: ParsedContactData): void {
+    const companyKeywords = [
+      'inc', 'corp', 'corporation', 'llc', 'ltd', 'limited', 'company', 'co.',
+      'technologies', 'solutions', 'services', 'group', 'holdings', 'enterprises'
+    ];
+    
+    // Look for explicit company indicators
     for (const line of lines) {
       const lowerLine = line.toLowerCase();
       if (companyKeywords.some(keyword => lowerLine.includes(keyword))) {
         result.company = line;
-        break;
+        result.field_confidence!.company = 0.85; // High confidence for keyword matches
+        console.log('[OCR DEBUG] Found company with keywords:', line);
+        return;
       }
     }
 
-    // If no company found with keywords, use heuristics
-    if (!result.company) {
-      // Look for lines that are all caps (common for company names)
-      const allCapsLine = lines.find(line => 
-        line === line.toUpperCase() && 
-        line.length > 2 && 
-        line !== result.full_name
-      );
-      if (allCapsLine) {
-        result.company = allCapsLine;
-      }
+    // Look for all-caps lines (common for company names)
+    const allCapsLine = lines.find(line => 
+      line === line.toUpperCase() && 
+      line.length > 2 && 
+      line !== result.full_name &&
+      !this.isDefinitelyNotName(line)
+    );
+    
+    if (allCapsLine) {
+      result.company = allCapsLine;
+      result.field_confidence!.company = 0.65; // Medium confidence for all-caps
+      console.log('[OCR DEBUG] Found company (all caps):', allCapsLine);
     }
   }
 
   /**
-   * Parse job title from OCR lines
+   * Parse job title from OCR lines with confidence scoring
    */
-  private parseTitle(lines: string[], result: ParsedContactData): void {
+  private parseTitleWithConfidence(lines: string[], result: ParsedContactData, words: any[]): void {
     const titleKeywords = [
       'director', 'manager', 'ceo', 'cto', 'cfo', 'president', 'vice president',
       'senior', 'lead', 'head', 'chief', 'coordinator', 'specialist', 'analyst',
@@ -185,32 +395,130 @@ export class OcrService {
       const lowerLine = line.toLowerCase();
       if (titleKeywords.some(keyword => lowerLine.includes(keyword))) {
         result.title = line;
+        
+        // Calculate confidence based on keyword strength and position
+        let confidence = 0.7; // Base confidence for keyword match
+        
+        // Executive titles get higher confidence
+        const executiveTitles = ['ceo', 'cto', 'cfo', 'president', 'director', 'manager'];
+        if (executiveTitles.some(title => lowerLine.includes(title))) {
+          confidence += 0.15;
+        }
+        
+        // Reduce confidence if it looks too much like a name
+        if (this.looksLikeName(line)) {
+          confidence -= 0.3;
+        }
+        
+        result.field_confidence!.title = Math.max(0.1, confidence);
+        console.log('[OCR DEBUG] Found title:', line, 'confidence:', result.field_confidence!.title);
         break;
       }
     }
   }
 
   /**
-   * Check if a line looks like a person's name
+   * Check if a line looks like a person's name with enhanced heuristics
    */
   private looksLikeName(line: string): boolean {
-    // Basic heuristics for name detection
-    const words = line.trim().split(/\s+/);
+    const trimmed = line.trim();
+    if (!trimmed) return false;
     
-    // Should have 1-4 words (allow single names too)
+    const words = trimmed.split(/\s+/);
+    
+    // Names typically have 1-4 words
     if (words.length < 1 || words.length > 4) return false;
     
-    // At least the first word should start with a capital letter
-    if (!/^[A-Z]/.test(words[0])) return false;
+    // All words should start with capital letters for names
+    if (!words.every(word => /^[A-Z]/.test(word))) return false;
     
-    // Should not contain common non-name words
-    const nonNameWords = ['inc', 'corp', 'llc', 'ltd', 'company', '@', 'www', '.com', 'phone', 'tel', 'email'];
-    if (nonNameWords.some(word => line.toLowerCase().includes(word))) return false;
+    const lowerLine = trimmed.toLowerCase();
     
-    // Should not be all numbers
-    if (/^\d+$/.test(line.replace(/\s/g, ''))) return false;
+    // ENHANCED: Comprehensive exclusion lists
+    const definitelyNotNames = [
+      // Company indicators
+      'inc', 'corp', 'llc', 'ltd', 'company', 'co.', 'corporation', 'limited', 'enterprises',
+      'technologies', 'solutions', 'services', 'group', 'holdings', 'international', 'global',
+      
+      // Contact info indicators
+      '@', 'www', '.com', '.net', '.org', 'phone', 'tel', 'email', 'fax', 'mobile', 'cell',
+      'http', 'https', 'linkedin', 'facebook', 'twitter',
+      
+      // Address indicators
+      'street', 'avenue', 'road', 'drive', 'suite', 'floor', 'building', 'plaza', 'center',
+      'boulevard', 'lane', 'way', 'circle', 'court', 'place',
+      
+      // Business card layout words
+      'business', 'card', 'contact', 'information', 'details', 'office', 'headquarters'
+    ];
     
-    return true;
+    if (definitelyNotNames.some(word => lowerLine.includes(word))) return false;
+    
+    // ENHANCED: More comprehensive job title detection
+    const jobTitleIndicators = [
+      // Executive titles
+      'president', 'ceo', 'cto', 'cfo', 'coo', 'chairman', 'chairwoman', 'founder', 'owner',
+      'executive', 'officer', 'principal', 'partner', 'proprietor',
+      
+      // Management titles
+      'manager', 'director', 'supervisor', 'administrator', 'coordinator', 'lead', 'head',
+      'chief', 'senior', 'junior', 'associate', 'assistant', 'deputy', 'vice',
+      
+      // Professional roles
+      'engineer', 'developer', 'programmer', 'analyst', 'consultant', 'advisor', 'specialist',
+      'technician', 'architect', 'designer', 'scientist', 'researcher', 'expert',
+      
+      // Industry-specific roles
+      'sales', 'marketing', 'finance', 'accounting', 'legal', 'human', 'resources',
+      'operations', 'production', 'quality', 'compliance', 'security', 'technology',
+      
+      // Professional qualifiers
+      'practitioner', 'professional', 'representative', 'agent', 'broker', 'planner',
+      'strategist', 'creative', 'technical', 'business', 'customer', 'client'
+    ];
+    
+    // Check if any word is a job title indicator
+    for (const word of words) {
+      const lowerWord = word.toLowerCase();
+      if (jobTitleIndicators.some(indicator => 
+        lowerWord === indicator || 
+        lowerWord.startsWith(indicator) || 
+        lowerWord.endsWith(indicator)
+      )) {
+        return false;
+      }
+    }
+    
+    // Additional heuristics
+    if (/^\d+$/.test(trimmed.replace(/\s/g, ''))) return false; // All numbers
+    if (trimmed.length > 60) return false; // Too long
+    if (words.length === 1 && words[0].length < 2) return false; // Single letter
+    
+    // ENHANCED: Positive name indicators
+    const namePatterns = [
+      /^[A-Z][a-z]+ [A-Z][a-z]+$/, // First Last
+      /^[A-Z][a-z]+ [A-Z]\.$/, // First M. (middle initial)
+      /^[A-Z]\. [A-Z][a-z]+$/, // F. Last
+      /^[A-Z][a-z]+ [A-Z][a-z]+ [A-Z][a-z]+$/, // First Middle Last
+      /^Dr\.|Mr\.|Mrs\.|Ms\./, // Titles that indicate names follow
+    ];
+    
+    // If it matches common name patterns, boost confidence
+    const matchesNamePattern = namePatterns.some(pattern => pattern.test(trimmed));
+    
+    // ENHANCED: Word analysis for names
+    const hasCommonNameWords = words.some(word => {
+      const lower = word.toLowerCase();
+      // Common first/last name patterns (basic check)
+      return (
+        lower.length >= 2 && 
+        lower.length <= 15 &&
+        /^[a-z]+$/.test(lower) && // Only letters
+        !jobTitleIndicators.includes(lower)
+      );
+    });
+    
+    return matchesNamePattern || (hasCommonNameWords && words.length >= 2);
   }
 
   /**
@@ -237,7 +545,85 @@ export class OcrService {
   }
 
   /**
-   * Validate and enhance parsed contact data
+   * Enhance contact data using OpenAI classification
+   * This is the new primary method that should be used instead of validateAndEnhanceData
+   */
+  async enhanceWithOpenAI(data: ParsedContactData): Promise<ParsedContactData> {
+    console.log('[OCR ENHANCEMENT] Starting OpenAI enhancement...');
+    
+    try {
+      // Prepare input for OpenAI classification
+      const classificationInput = {
+        raw_text: data.raw_text,
+        initial_extraction: {
+          full_name: data.full_name,
+          company: data.company,
+          title: data.title,
+          email: data.email,
+          phone: data.phone,
+          linkedin_url: data.linkedin_url,
+        },
+        ocr_confidence: data.confidence,
+      };
+
+      // Get OpenAI classification
+      const classification = await openaiClassificationService.classifyContactFields(classificationInput);
+      
+      console.log('[OCR ENHANCEMENT] OpenAI classification completed');
+      console.log('[OCR ENHANCEMENT] Issues found:', classification.issues_found);
+      console.log('[OCR ENHANCEMENT] Overall confidence:', classification.overall_confidence);
+
+      // Apply OpenAI corrections
+      const enhanced: ParsedContactData = {
+        ...data,
+        full_name: classification.corrected_fields.full_name || data.full_name,
+        company: classification.corrected_fields.company || data.company,
+        title: classification.corrected_fields.title || data.title,
+        email: classification.corrected_fields.email || data.email,
+        phone: classification.corrected_fields.phone || data.phone,
+        linkedin_url: classification.corrected_fields.linkedin_url || data.linkedin_url,
+        confidence: classification.overall_confidence,
+        field_confidence: {
+          full_name: classification.confidence_scores.full_name || data.field_confidence?.full_name,
+          company: classification.confidence_scores.company || data.field_confidence?.company,
+          title: classification.confidence_scores.title || data.field_confidence?.title,
+          email: classification.confidence_scores.email || data.field_confidence?.email,
+          phone: classification.confidence_scores.phone || data.field_confidence?.phone,
+          linkedin_url: classification.confidence_scores.linkedin_url || data.field_confidence?.linkedin_url,
+        },
+      };
+
+      // Add OpenAI metadata to raw data
+      enhanced.raw_data = {
+        ...data.raw_data,
+        openai_classification: {
+          issues_found: classification.issues_found,
+          reasoning: classification.reasoning,
+          corrected_fields: classification.corrected_fields,
+        },
+      };
+
+      console.log('[OCR ENHANCEMENT] Enhanced data:', {
+        full_name: enhanced.full_name,
+        company: enhanced.company,
+        title: enhanced.title,
+        confidence: enhanced.confidence,
+      });
+
+      // Apply final validation and formatting
+      return this.validateAndEnhanceData(enhanced);
+      
+    } catch (error) {
+      console.error('[OCR ENHANCEMENT] OpenAI enhancement failed:', error);
+      console.log('[OCR ENHANCEMENT] Falling back to basic validation');
+      
+      // Fallback to basic validation if OpenAI fails
+      return this.validateAndEnhanceData(data);
+    }
+  }
+
+  /**
+   * Validate and enhance parsed contact data (legacy method, now used as fallback)
    */
   validateAndEnhanceData(data: ParsedContactData): ParsedContactData {
     const enhanced = { ...data };

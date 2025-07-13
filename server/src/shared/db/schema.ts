@@ -41,6 +41,9 @@ export const contacts = pgTable('contacts', {
   ocrConfidence: decimal('ocr_confidence', { precision: 3, scale: 2 }),
   ocrRawData: jsonb('ocr_raw_data'),
   
+  // User modification tracking - prevents OCR from overwriting manual edits
+  userModifiedFields: jsonb('user_modified_fields').default('{}'),
+  
   // Processing tracking
   status: varchar('status', { length: 20 }).default('processing'),
   processedAt: timestamp('processed_at'),

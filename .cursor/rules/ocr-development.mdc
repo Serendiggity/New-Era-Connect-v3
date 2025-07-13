@@ -1,0 +1,163 @@
+---
+description: OCR-specific development patterns and best practices for Business Card Lead Manager
+globs: ["**/ocr/**", "**/contacts/**", "**/tesseract/**"]
+alwaysApply: false
+---
+
+# 📷 OCR Development Guidelines
+
+## Tesseract.js Best Practices
+
+### Configuration
+- Use worker-based processing for non-blocking operations
+- Configure for business card text recognition:
+  ```javascript
+  const config = {
+    tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789@.-+()[]{}',
+    tessedit_pageseg_mode: PSM.SINGLE_BLOCK,
+    preserve_interword_spaces: '1'
+  };
+  ```
+
+### Image Preprocessing
+- Resize images to optimal dimensions (1000-2000px width)
+- Apply contrast enhancement for low-quality photos
+- Convert to grayscale before processing
+- Denoise using median filters for mobile photos
+
+## Confidence Scoring System
+
+### Threshold Guidelines
+- **High Confidence** (>= 0.85): Auto-accept and mark as `completed`
+- **Medium Confidence** (0.60-0.84): Queue for review (`pending_review`)
+- **Low Confidence** (< 0.60): Mark as `failed`, require manual entry
+
+### Field-Specific Thresholds
+```javascript
+const fieldThresholds = {
+  email: 0.90,      // Email format validation helps
+  phone: 0.80,      // Phone patterns are recognizable
+  name: 0.75,       // Names are often clear
+  company: 0.70,    // Company names vary widely
+  title: 0.65       // Job titles are most variable
+};
+```
+
+## Status Management
+
+### Processing Flow
+1. **Upload** → `status: 'processing'`
+2. **OCR Complete** → `status: 'completed'` | `'pending_review'` | `'failed'`
+3. **User Review** → `status: 'user_verified'`
+4. **Manual Entry** → `status: 'user_verified'`
+
+### Database Updates
+- Always set `processed_at` timestamp when OCR completes
+- Track processing duration for performance monitoring
+- Log confidence scores for each extracted field
+- Store original image metadata (size, format, device info)
+
+## Error Handling
+
+### Common OCR Failures
+1. **Image Quality Issues**
+   - Blur, low resolution, poor lighting
+   - Retry with different preprocessing
+   - Fallback to manual entry UI
+
+2. **Text Detection Failures**
+   - No text detected or very low confidence
+   - Mark as `failed` immediately
+   - Provide clear error message to user
+
+3. **Processing Timeouts**
+   - Set 30-second timeout for OCR operations
+   - Cancel worker and clean up resources
+   - Retry once with simplified preprocessing
+
+### Retry Logic
+```javascript
+const retryConfig = {
+  maxAttempts: 2,
+  backoffMs: 1000,
+  timeoutMs: 30000
+};
+```
+
+## Performance Optimization
+
+### Resource Management
+- Limit concurrent OCR operations (max 2 workers)
+- Clean up Tesseract workers after processing
+- Implement queue system for batch processing
+- Monitor memory usage during processing
+
+### Caching Strategy
+- Cache preprocessed images for retry attempts
+- Store OCR results to avoid reprocessing
+- Implement image size validation before processing
+- Use compression for stored business card images
+
+## Testing Patterns
+
+### Unit Tests
+- Mock Tesseract.js for fast test execution
+- Test confidence calculation algorithms
+- Verify status transitions and timestamps
+- Test error handling scenarios
+
+### Integration Tests
+- Use sample business card images
+- Test end-to-end OCR workflow
+- Verify database state changes
+- Test review queue functionality
+
+### Performance Tests
+- Measure processing time per image
+- Test memory usage with large images
+- Verify timeout handling
+- Test concurrent processing limits
+
+## User Experience Guidelines
+
+### Progress Indication
+- Show upload progress (0-20%)
+- Display OCR processing status (20-80%)
+- Indicate results processing (80-100%)
+- Provide clear success/error feedback
+
+### Review Interface
+- Display original image alongside extracted data
+- Highlight low-confidence fields
+- Enable field-by-field editing
+- Show confidence scores for transparency
+
+### Error Recovery
+- Provide "Try Again" option for failed OCR
+- Allow manual data entry as fallback
+- Offer image capture tips for better results
+- Support multiple image formats (JPG, PNG, HEIC)
+
+## Activity Logging
+
+### Required Events
+- `contact_uploaded`: Image uploaded successfully
+- `ocr_started`: OCR processing initiated
+- `ocr_completed`: OCR finished with results
+- `ocr_failed`: OCR processing failed
+- `contact_reviewed`: User completed manual review
+- `contact_verified`: User verified OCR results
+
+### Log Data Structure
+```javascript
+{
+  action: 'ocr_completed',
+  contact_id: 123,
+  metadata: {
+    processing_time_ms: 5432,
+    confidence_score: 0.78,
+    fields_extracted: ['name', 'email', 'company'],
+    image_size_kb: 245
+  }
+}
+```

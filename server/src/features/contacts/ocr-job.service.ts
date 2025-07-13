@@ -87,15 +87,15 @@ export class OcrJobService {
     try {
       // Get the contact to extract business card URL
       const contact = await contactsService.findById(job.contactId);
-      if (!contact.businessCardUrl) {
+      if (!contact.business_card_url) {
         throw new Error('Contact does not have a business card URL');
       }
 
       // Update contact status to processing
-      await contactsService.update(contact.id, { status: 'processing' });
+      await contactsService.update(contact.id, { id: contact.id, status: 'processing' });
 
       // Download the image
-      const imageBuffer = await uploadService.getFileBuffer(contact.businessCardUrl);
+      const imageBuffer = await uploadService.getFileBuffer(contact.business_card_url);
 
       // Validate it's an image
       if (!uploadService.validateImageFile(imageBuffer)) {
@@ -111,37 +111,121 @@ export class OcrJobService {
       // Parse contact data from OCR text
       const parsedData = ocrService.parseContactData(ocrResult);
 
-      // Validate and enhance the data
-      const enhancedData = ocrService.validateAndEnhanceData(parsedData);
+      // Enhance the data using OpenAI classification
+      const enhancedData = await ocrService.enhanceWithOpenAI(parsedData);
 
-      // Update the contact with OCR results
+      console.log('[OCR JOB DEBUG] Enhanced OCR data:', {
+        confidence: enhancedData.confidence,
+        full_name: enhancedData.full_name,
+        email: enhancedData.email,
+        phone: enhancedData.phone,
+        company: enhancedData.company,
+        title: enhancedData.title,
+        linkedin_url: enhancedData.linkedin_url,
+        hasRawData: !!enhancedData.raw_data
+      });
+
+      console.log('[OCR JOB DEBUG] Current contact data:', {
+        id: contact.id,
+        fullName: contact.full_name,
+        email: contact.email,
+        phone: contact.phone,
+        status: contact.status
+      });
+
+      // Update the contact with OCR results (using API snake_case field names)
       const updateData: any = {
-        ocrConfidence: enhancedData.confidence,
-        ocrRawData: enhancedData.raw_data,
+        ocr_confidence: enhancedData.confidence,
+        ocr_raw_data: enhancedData.raw_data,
         status: enhancedData.confidence >= 0.7 ? 'completed' : 'pending_review',
       };
 
-      // Only update contact fields if they're not already set or if OCR confidence is high
-      if (enhancedData.confidence >= 0.8 || !contact.fullName || contact.fullName.trim() === '' || contact.fullName === 'Processing...') {
-        if (enhancedData.full_name) updateData.fullName = enhancedData.full_name;
-      }
-      if (enhancedData.confidence >= 0.8 || !contact.email) {
-        if (enhancedData.email) updateData.email = enhancedData.email;
-      }
-      if (enhancedData.confidence >= 0.8 || !contact.company) {
-        if (enhancedData.company) updateData.company = enhancedData.company;
-      }
-      if (enhancedData.confidence >= 0.8 || !contact.title) {
-        if (enhancedData.title) updateData.title = enhancedData.title;
-      }
-      if (enhancedData.confidence >= 0.8 || !contact.phone) {
-        if (enhancedData.phone) updateData.phone = enhancedData.phone;
-      }
-      if (enhancedData.confidence >= 0.8 || !contact.linkedinUrl) {
-        if (enhancedData.linkedin_url) updateData.linkedinUrl = enhancedData.linkedin_url;
+      // CRITICAL FIX: Respect user-modified fields to prevent OCR from overwriting manual edits
+      const userModifiedFields = contact.user_modified_fields || {};
+      console.log('[OCR JOB DEBUG] User modified fields:', userModifiedFields);
+
+      // ENHANCED: Helper function with field-level confidence analysis
+      const shouldUpdateField = (fieldName: string, currentValue: any, ocrValue: any) => {
+        const isUserModified = (userModifiedFields as any)[fieldName] === true;
+        const hasNoCurrentValue = !currentValue || currentValue.trim() === '' || currentValue === 'Processing...';
+        const hasOcrValue = ocrValue && ocrValue.trim() !== '';
+        
+        // Get field-specific confidence score
+        const fieldConfidence = (enhancedData.field_confidence as any)?.[fieldName] || enhancedData.confidence;
+        const isHighFieldConfidence = fieldConfidence >= 0.85; // Field-specific high confidence
+        const isVeryHighFieldConfidence = fieldConfidence >= 0.95; // Field-specific very high confidence
+
+        console.log(`[OCR JOB DEBUG] ${fieldName} analysis:`, {
+          isUserModified,
+          hasNoCurrentValue,
+          hasOcrValue,
+          fieldConfidence,
+          overallConfidence: enhancedData.confidence,
+          isHighFieldConfidence,
+          isVeryHighFieldConfidence
+        });
+
+        // Never override user-modified fields unless field confidence is extremely high (95%+)
+        if (isUserModified) {
+          if (isVeryHighFieldConfidence) {
+            console.log(`[OCR JOB DEBUG] Overriding user-modified ${fieldName} - very high field confidence (${fieldConfidence})`);
+            return true;
+          } else {
+            console.log(`[OCR JOB DEBUG] Skipping ${fieldName} - user modified, insufficient confidence (${fieldConfidence})`);
+            return false;
+          }
+        }
+
+        // Always update if no current value and we have OCR data with reasonable confidence
+        if (hasNoCurrentValue && hasOcrValue && fieldConfidence >= 0.5) {
+          console.log(`[OCR JOB DEBUG] Updating ${fieldName} - no current value, adequate confidence (${fieldConfidence})`);
+          return true;
+        }
+
+        // Update with high field-specific confidence
+        if (isHighFieldConfidence && hasOcrValue) {
+          console.log(`[OCR JOB DEBUG] Updating ${fieldName} - high field confidence (${fieldConfidence})`);
+          return true;
+        }
+
+        console.log(`[OCR JOB DEBUG] Skipping ${fieldName} - protected from OCR override (confidence: ${fieldConfidence})`);
+        return false;
+      };
+
+      // Apply field-by-field update logic with user modification protection
+      if (shouldUpdateField('full_name', contact.full_name, enhancedData.full_name)) {
+        updateData.full_name = enhancedData.full_name;
+        console.log('[OCR JOB DEBUG] Will update name to:', enhancedData.full_name);
       }
 
+      if (shouldUpdateField('email', contact.email, enhancedData.email)) {
+        updateData.email = enhancedData.email;
+      }
+
+      if (shouldUpdateField('company', contact.company, enhancedData.company)) {
+        updateData.company = enhancedData.company;
+      }
+
+      if (shouldUpdateField('title', contact.title, enhancedData.title)) {
+        updateData.title = enhancedData.title;
+      }
+
+      if (shouldUpdateField('phone', contact.phone, enhancedData.phone)) {
+        updateData.phone = enhancedData.phone;
+      }
+
+      if (shouldUpdateField('linkedin_url', contact.linkedin_url, enhancedData.linkedin_url)) {
+        updateData.linkedin_url = enhancedData.linkedin_url;
+      }
+
+      console.log('[OCR JOB DEBUG] Final update data:', updateData);
+      
+      // Mark this as an OCR update to prevent user modification tracking
+      updateData.ocr_confidence = enhancedData.confidence;
+      
       await contactsService.update(contact.id, updateData);
+      
+      console.log('[OCR JOB DEBUG] Contact updated successfully');
 
       // Mark job as completed
       await this.updateJob({
@@ -156,7 +240,7 @@ export class OcrJobService {
         confidence: enhancedData.confidence,
         status: updateData.status,
         extractedFields: Object.keys(enhancedData).filter(key => 
-          enhancedData[key] && !['confidence', 'raw_text', 'raw_data'].includes(key)
+          (enhancedData as any)[key] && !['confidence', 'raw_text', 'raw_data'].includes(key)
         ),
       });
 
@@ -174,7 +258,7 @@ export class OcrJobService {
       });
 
       // Update contact status to failed
-      await contactsService.update(job.contactId, { status: 'failed' });
+      await contactsService.update(job.contactId, { id: job.contactId, status: 'failed' });
 
       // Log failed processing
       await this.logActivity('ocr_job_failed', 'ocr_job', jobId, {

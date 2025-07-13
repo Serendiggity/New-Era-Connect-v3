@@ -1,0 +1,122 @@
+---
+description: Patterns for Cursor + Claude Code collaboration in Business Card Lead Manager
+alwaysApply: false
+---
+
+# 🤝 Multi-Agent Collaboration Patterns
+
+## Task Complexity Scoring (1-10)
+
+Use this matrix to determine optimal agent assignment:
+
+### Cursor Tasks (1-4 complexity)
+- **UI Components** (1-2): Basic React components, styling tweaks
+- **Quick Fixes** (2-3): Bug fixes, minor refactoring, documentation updates  
+- **Form Handling** (3-4): Contact forms, event creation, simple validation
+
+### Claude Code Tasks (5-8 complexity)
+- **Backend Services** (5-6): OCR processing, database operations, API endpoints
+- **Complex Logic** (6-7): Email template generation, confidence scoring algorithms
+- **Multi-file Operations** (7-8): Feature slice creation, database migrations
+
+### Collaborative Tasks (8-10 complexity)
+- **Full Feature Implementation** (8-9): Both agents work in parallel
+- **System Integration** (9-10): Requires coordination and handoffs
+
+## Parallel Execution Patterns
+
+### Pattern 1: Terminal-in-Cursor
+```bash
+# In Cursor terminal
+claude --project /mnt/c/Users/jeffr/Music/Dev\ Repo/New-Era-Connect-v3
+
+# Claude Code handles backend while Cursor manages UI
+```
+
+### Pattern 2: Synchronized Development
+1. **Cursor**: Creates React component structure
+2. **Claude Code**: Implements backend API simultaneously  
+3. **Cursor**: Integrates API calls and handles UI logic
+4. **Claude Code**: Writes tests and handles error scenarios
+
+### Pattern 3: Review-Driven Development
+1. **Claude Code**: Implements feature with comprehensive tests
+2. **Cursor**: Reviews changes in diff view
+3. **Cursor**: Refines UI/UX aspects
+4. **Claude Code**: Handles deployment and monitoring setup
+
+## Communication Protocols
+
+### Handoff Triggers
+- **Complexity Escalation**: When Cursor hits complexity > 4
+- **System Access Needed**: Terminal commands, file operations, git operations
+- **Testing Required**: Integration tests, E2E scenarios
+- **Performance Issues**: When optimization needed
+
+### Context Sharing
+- Use `@handoff:context` comments in code
+- Reference specific files/functions in handoff messages
+- Document decisions in feature slice READMEs
+- Update activity logs for both agents
+
+## Session Management
+
+### Cursor Sessions
+- Keep sessions focused on UI/frontend concerns
+- Use MCP servers for real-time data
+- Leverage project-wide context and indexing
+- Session length: 1-2 hours optimal
+
+### Claude Code Sessions  
+- Handle backend/system operations
+- Use `/compact` command every 20 minutes
+- Clear sessions with `/clear` for new major tasks
+- Session length: 10-20 minutes optimal for autonomous work
+
+## Feature-Specific Patterns
+
+### OCR Processing Workflow
+1. **Claude Code**: Implements Tesseract.js integration and confidence scoring
+2. **Cursor**: Creates upload UI and progress indicators
+3. **Claude Code**: Handles error scenarios and retry logic
+4. **Cursor**: Implements review modal for low-confidence results
+
+### Email Campaign Generation
+1. **Cursor**: Designs template selection UI
+2. **Claude Code**: Implements OpenAI integration and personalization logic
+3. **Cursor**: Creates campaign preview interface
+4. **Claude Code**: Handles CSV export and Gmail integration
+
+### Database Operations
+1. **Claude Code**: Writes migrations and complex queries
+2. **Cursor**: Creates data display components
+3. **Claude Code**: Implements caching and performance optimization
+4. **Cursor**: Handles loading states and error boundaries
+
+## Performance Monitoring
+
+### Success Metrics
+- **Time to Implementation**: Target 50% reduction vs single-agent
+- **Code Quality**: Maintain test coverage > 80%
+- **Context Efficiency**: Minimize redundant context loading
+- **Handoff Frequency**: Optimize for < 3 handoffs per feature
+
+### Tracking Tools
+- Use GitHub MCP for PR metrics
+- TaskMaster AI MCP for task completion tracking
+- Manual time tracking for development phases
+- Code review quality scores
+
+## Troubleshooting
+
+### Common Issues
+1. **Context Mismatch**: Ensure both agents have current project state
+2. **Merge Conflicts**: Use clear git commit messages and frequent pulls
+3. **Permission Errors**: Verify MCP server configurations
+4. **Performance Degradation**: Monitor token usage and session length
+
+### Recovery Patterns
+- **Context Refresh**: Both agents review recent commits
+- **State Synchronization**: Use database MCP to verify current state
+- **Clean Slate**: Start new sessions if context becomes polluted
+- **Manual Coordination**: Direct human intervention for complex conflicts

@@ -1,0 +1,89 @@
+---
+description: MCP server usage and security guidelines for Business Card Lead Manager
+alwaysApply: true
+---
+
+# 🔗 MCP Integration Guidelines
+
+## MCP Server Usage
+
+When working with Model Context Protocol servers:
+
+### Database Operations (Supabase MCP)
+- Use `@supabase` for database queries and schema exploration
+- Always verify data before making changes
+- Use read-only mode during development phases
+- Example: "Query the contacts table to understand current OCR processing status"
+
+### Code Repository (GitHub MCP)
+- Use `@github` for PR creation, issue management, and code review
+- Follow the existing handoff protocol when creating PRs
+- Example: "Create a PR for the OCR enhancement with proper labels"
+
+### Task Management (TaskMaster AI MCP)
+- Use `@taskmaster-ai` for complex task coordination
+- Leverage multiple AI providers for different aspects
+- Example: "Break down the email campaign feature into subtasks"
+
+### Web Research (Web Eval Agent MCP)
+- Use `@web-eval-agent` for researching APIs and documentation
+- Validate technical approaches before implementation
+- Example: "Research best practices for Tesseract.js confidence thresholds"
+
+## Security Requirements
+
+### Environment Variables
+- NEVER hardcode API keys in configuration
+- Use environment variables: `${VARIABLE_NAME}`
+- Verify `.env.mcp` exists before starting MCP servers
+
+### Permission Scoping
+- Use minimal required permissions for each service
+- Prefer read-only access during development
+- Escalate permissions only when necessary
+
+### Data Protection
+- Do not expose sensitive business card data through MCP logs
+- Sanitize queries before sending to external MCP servers
+- Regular token rotation (monthly for dev, quarterly for prod)
+
+## Integration with Multi-Agent Workflow
+
+### Cursor Tasks (Use MCP for):
+- Quick database queries for UI data
+- GitHub operations (PR creation, issue updates)
+- Real-time web research for UI libraries
+
+### Claude Code Tasks (Use MCP for):
+- Complex database migrations and schema changes
+- Backend API integration research
+- Multi-step task coordination via TaskMaster
+
+### Shared Context
+- Both agents can access the same MCP servers
+- Use consistent naming conventions in MCP queries
+- Document complex queries in the relevant feature slice
+
+## Error Handling
+
+### MCP Server Failures
+- Gracefully degrade when MCP servers are unavailable
+- Provide manual alternatives for critical operations
+- Log MCP errors for debugging
+
+### Token Issues
+- Check token validity before complex operations
+- Provide clear error messages for expired tokens
+- Reference security guide for token rotation procedures
+
+## Performance Guidelines
+
+### Query Optimization
+- Cache frequently accessed data locally
+- Batch similar MCP operations when possible
+- Monitor MCP response times
+
+### Context Management
+- Use MCP servers to reduce manual context loading
+- Leverage database MCP for real-time project state
+- Minimize redundant MCP calls within the same session

@@ -279,6 +279,7 @@ router.post('/:id/upload', upload.single('businessCard'), async (req, res) => {
 
     // Update contact with business card URL
     const contact = await contactsService.update(id, {
+      id: id,
       business_card_url: uploadResult.url,
       status: 'processing',
     });

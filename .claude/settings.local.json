@@ -21,7 +21,22 @@
       "Bash(git add:*)",
       "Bash(git commit:*)",
       "Bash(git checkout:*)",
-      "Bash(rm:*)"
+      "Bash(rm:*)",
+      "Bash(npm run:*)",
+      "Bash(tsx:*)",
+      "Bash(node:*)",
+      "Bash(ss:*)",
+      "Bash(cd:*)",
+      "Bash(cp:*)",
+      "Bash(code:*)",
+      "Bash(cursor:*)",
+      "WebFetch(domain:docs.cursor.com)",
+      "Bash(grep:*)",
+      "Bash(DATABASE_URL=\"postgresql://postgres:orangepeel@db.kqqbwaadnszbafdyhlnk.supabase.co:5432/postgres\" npx tsx src/scripts/debug-database.ts)",
+      "Bash(DATABASE_URL=\"postgresql://postgres:orangepeel@db.kqqbwaadnszbafdyhlnk.supabase.co:5432/postgres\" npx tsx src/scripts/debug-service.ts)",
+      "Bash(DATABASE_URL=\"postgresql://postgres:orangepeel@db.kqqbwaadnszbafdyhlnk.supabase.co:5432/postgres\" npx tsx src/scripts/test-ocr-flow.ts)",
+      "Bash(DATABASE_URL=\"postgresql://postgres:orangepeel@db.kqqbwaadnszbafdyhlnk.supabase.co:5432/postgres\" SUPABASE_URL=\"https://kqqbwaadnszbafdyhlnk.supabase.co\" SUPABASE_ANON_KEY=\"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtxcWJ3YWFkbnN6YmFmZHlobG5rIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTIyNzQ2MTgsImV4cCI6MjA2Nzg1MDYxOH0.8t_VS2eSWQzzenQAnsJmjHHRyS9DnCUZb3wrLQvqHNg\" npx tsx src/scripts/test-ocr-flow.ts)",
+      "Bash(DATABASE_URL=\"postgresql://postgres:orangepeel@db.kqqbwaadnszbafdyhlnk.supabase.co:5432/postgres\" npx tsx src/scripts/debug-api.ts)"
     ],
     "deny": []
   }

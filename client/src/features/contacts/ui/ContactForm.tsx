@@ -11,9 +11,10 @@ interface ContactFormProps {
   eventId?: number;
   onSubmit: (data: CreateContactInput | UpdateContactInput) => Promise<void>;
   onCancel?: () => void;
+  skipNavigation?: boolean; // Allow parent to handle navigation
 }
 
-export function ContactForm({ contact, eventId, onSubmit, onCancel }: ContactFormProps) {
+export function ContactForm({ contact, eventId, onSubmit, onCancel, skipNavigation }: ContactFormProps) {
   const navigate = useNavigate();
   const uploadBusinessCardForContact = useUploadBusinessCardForContact();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -49,7 +50,11 @@ export function ContactForm({ contact, eventId, onSubmit, onCancel }: ContactFor
       });
 
       await onSubmit(cleanedData);
-      navigate(contact ? `/contacts/${contact.id}` : '/contacts');
+      
+      // Only navigate if not explicitly skipped by parent
+      if (!skipNavigation) {
+        navigate(contact ? `/contacts/${contact.id}` : '/contacts');
+      }
     } catch (error) {
       console.error('Error submitting contact:', error);
       alert('Failed to save contact. Please try again.');
@@ -126,7 +131,12 @@ export function ContactForm({ contact, eventId, onSubmit, onCancel }: ContactFor
       <form onSubmit={handleSubmit} className="space-y-4">
       <div>
         <label htmlFor="full_name" className="block text-sm font-medium mb-1">
-          Full Name *
+          Full Name * 
+          {contact?.user_modified_fields?.full_name && (
+            <span className="ml-2 text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded">
+              ✓ Manually verified
+            </span>
+          )}
         </label>
         <input
           id="full_name"

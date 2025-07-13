@@ -8,11 +8,11 @@ alwaysApply: true
 
 ### 1 ▪ Port Map
 
-| Slot | Agent (preferred) | FE | BE |
-|------|-------------------|----|----|
-| A    | **Cursor**        | 3000 | 8000 |
-| B    | **Claude**        | 3002 | 8002 |
-| C    | Any / overflow    | 3004 | 8004 |
+| Slot | Agent (preferred) | FE | BE | MCP Range |
+|------|-------------------|----|----|-----------|
+| A    | **Cursor**        | 3000 | 8000 | 8100-8119 |
+| B    | **Claude Code**   | 3002 | 8002 | 8120-8139 |
+| C    | Any / overflow    | 3004 | 8004 | 8140-8159 |
 
 ### 2 ▪ Claim protocol
 
@@ -39,7 +39,27 @@ npm run dev   # or next dev, vite, uvicorn, etc.
 ### 4 ▪ Release slot on exit
 Remove your own line-entry from ports.log (match by PID).
 
-### 5 ▪ Safety guard
+### 5 ▪ MCP Server Management
+
+```bash
+# Check MCP server status
+lsof -i :8120-8139 | grep LISTEN
+
+# Start MCP servers with proper port allocation
+export MCP_PORT_BASE=8120  # For Claude Code slot B
+export MCP_DEBUG=1
+claude --mcp-port $MCP_PORT_BASE
+```
+
+### 6 ▪ Multi-Agent Coordination
+
+When both agents run simultaneously:
+- **Shared Development**: Both use same branch, coordinate via git
+- **Resource Allocation**: Monitor memory usage with `free -h`
+- **Terminal Sessions**: Claude Code runs in Cursor terminal for best integration
+- **Port Conflicts**: Use `netstat -tulpn | grep :80` to check conflicts
+
+### 7 ▪ Safety guard
 Before killing any PID, confirm it belongs to the repo path or ask the user.
 
 *END*

@@ -8,6 +8,13 @@
       "when": 1752275802937,
       "tag": "0000_round_power_man",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "5",
+      "when": 1736738040000,
+      "tag": "0001_add_user_modified_fields",
+      "breakpoints": true
     }
   ]
 }

@@ -2,6 +2,7 @@ import { db } from '../../shared/db/connection.js';
 import { contacts, activityLogs } from '../../shared/db/schema.js';
 import { eq, and, or, like, desc, sql } from 'drizzle-orm';
 import { z } from 'zod';
+import { mapContactDbToApi, mapContactApiToDb } from '../../shared/utils/field-mapping.js';
 
 // Validation schemas
 export const ContactStatusEnum = z.enum(['processing', 'completed', 'failed', 'pending_review', 'user_verified']);
@@ -18,6 +19,7 @@ export const CreateContactSchema = z.object({
   business_card_url: z.string().optional(),
   ocr_confidence: z.number().min(0).max(1).optional(),
   ocr_raw_data: z.any().optional(),
+  user_modified_fields: z.record(z.boolean()).optional(),
   status: ContactStatusEnum.optional().default('processing'),
 });
 
@@ -82,7 +84,8 @@ export class ContactsService {
     // Log activity
     await this.logActivity('contacts_listed', 'contact', null, { filters });
 
-    return results;
+    // Map database fields to frontend expected format
+    return results.map(contact => mapContactDbToApi(contact));
   }
 
   async findById(id: number) {
@@ -96,7 +99,7 @@ export class ContactsService {
       throw new Error(`Contact with id ${id} not found`);
     }
 
-    return result[0];
+    return mapContactDbToApi(result[0]);
   }
 
   async create(data: CreateContactInput) {
@@ -111,22 +114,31 @@ export class ContactsService {
       }
     }
 
+    // Convert API data to database format
+    const dbData = mapContactApiToDb({
+      event_id: data.event_id,
+      full_name: data.full_name,
+      email: data.email,
+      company: data.company,
+      title: data.title,
+      phone: data.phone,
+      linkedin_url: data.linkedin_url,
+      business_card_url: data.business_card_url,
+      ocr_confidence: data.ocr_confidence,
+      ocr_raw_data: data.ocr_raw_data,
+      user_modified_fields: data.user_modified_fields || {},
+      status: finalStatus,
+      processed_at: data.ocr_confidence !== undefined ? new Date() : undefined,
+    });
+
+    // Ensure ocr_confidence is stored as string in database
+    if (dbData.ocrConfidence !== undefined) {
+      dbData.ocrConfidence = dbData.ocrConfidence.toString();
+    }
+
     const [newContact] = await db
       .insert(contacts)
-      .values({
-        eventId: data.event_id,
-        fullName: data.full_name,
-        email: data.email,
-        company: data.company,
-        title: data.title,
-        phone: data.phone,
-        linkedinUrl: data.linkedin_url,
-        businessCardUrl: data.business_card_url,
-        ocrConfidence: data.ocr_confidence?.toString(),
-        ocrRawData: data.ocr_raw_data,
-        status: finalStatus,
-        processedAt: data.ocr_confidence !== undefined ? new Date() : undefined,
-      })
+      .values(dbData)
       .returning();
 
     // Log activity
@@ -134,18 +146,52 @@ export class ContactsService {
       event_id: data.event_id,
       status: finalStatus,
       ocr_confidence: data.ocr_confidence,
+      user_modified_fields: data.user_modified_fields,
     });
 
-    return newContact;
+    return mapContactDbToApi(newContact);
   }
 
   async update(id: number, data: UpdateContactInput) {
-    const existing = await this.findById(id);
+    // Get existing contact from database without mapping (to avoid recursion)
+    const existingResult = await db
+      .select()
+      .from(contacts)
+      .where(eq(contacts.id, id))
+      .limit(1);
+
+    if (!existingResult[0]) {
+      throw new Error(`Contact with id ${id} not found`);
+    }
+
+    const existing = existingResult[0];
 
     // Track if this is a user verification
     const isUserVerification = 
       existing.status === 'pending_review' && 
       data.status === 'user_verified';
+
+    // Determine which fields have been modified by user
+    const userModifiedFields = { ...(existing.userModifiedFields || {}) };
+    const fieldMappings = {
+      'full_name': 'fullName',
+      'email': 'email',
+      'company': 'company', 
+      'title': 'title',
+      'phone': 'phone',
+      'linkedin_url': 'linkedinUrl'
+    };
+
+    // Mark fields as user-modified if they're being changed from OCR processing
+    // Only mark as user-modified if this is a manual update (not from OCR)
+    const isOcrUpdate = data.ocr_confidence !== undefined;
+    if (!isOcrUpdate) {
+      Object.entries(fieldMappings).forEach(([userField]) => {
+        if (data[userField as keyof UpdateContactInput] !== undefined) {
+          (userModifiedFields as any)[userField] = true;
+        }
+      });
+    }
 
     const updateData: any = {
       eventId: data.event_id,
@@ -158,6 +204,7 @@ export class ContactsService {
       businessCardUrl: data.business_card_url,
       ocrConfidence: data.ocr_confidence?.toString(),
       ocrRawData: data.ocr_raw_data,
+      userModifiedFields: userModifiedFields,
       status: data.status,
       updatedAt: new Date(),
     };
@@ -188,14 +235,27 @@ export class ContactsService {
         changes: data,
         previousStatus: existing.status,
         newStatus: data.status,
+        userModifiedFields: userModifiedFields,
+        wasOcrUpdate: isOcrUpdate,
       }
     );
 
-    return updated;
+    return mapContactDbToApi(updated);
   }
 
   async delete(id: number) {
-    const existing = await this.findById(id);
+    // Get existing contact from database without mapping (to avoid recursion)
+    const existingResult = await db
+      .select()
+      .from(contacts)
+      .where(eq(contacts.id, id))
+      .limit(1);
+
+    if (!existingResult[0]) {
+      throw new Error(`Contact with id ${id} not found`);
+    }
+
+    const existing = existingResult[0];
 
     await db.delete(contacts).where(eq(contacts.id, id));
 
@@ -228,7 +288,7 @@ export class ContactsService {
       count: updated.length,
     });
 
-    return updated;
+    return updated.map(contact => mapContactDbToApi(contact));
   }
 
   async getStats() {
@@ -288,7 +348,7 @@ export class ContactsService {
       requiresReview: status === 'pending_review',
     });
 
-    return updated;
+    return mapContactDbToApi(updated);
   }
 
   private async logActivity(
@@ -308,6 +368,7 @@ export class ContactsService {
       },
     });
   }
+
 }
 
 // Export singleton instance

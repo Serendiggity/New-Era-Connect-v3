@@ -21,6 +21,9 @@ export interface Contact extends BaseEntity {
   ocr_confidence?: number; // 0.00 to 1.00
   ocr_raw_data?: Record<string, any>;
   
+  // User modification tracking - prevents OCR from overwriting manual edits
+  user_modified_fields?: Record<string, boolean>;
+  
   // Processing tracking
   status: ContactStatus;
   processed_at?: Timestamp;

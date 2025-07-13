@@ -4,44 +4,126 @@ alwaysApply: true
 
 # 🤝 AI Handoff Protocol
 
-Purpose → lossless, trackable transfers between **Claude (WSL)** and **Cursor (Win)**.
+Purpose → lossless, trackable transfers between **Claude Code** and **Cursor** with MCP integration.
 
 ---
 
-## 1 ▪ Before you start
-*Verify that `AGENT_SELF` matches the branch’s expected author:*  
-- `CURSOR` ⇒ active coding / implementation branches  
-- `CLAUDE` ⇒ design and review branches
+## 1 ▪ Agent Responsibilities
 
-Abort with a warning if mismatch.
+**Claude Code (Backend Lead)**:
+- Complex backend logic, OCR processing, database operations
+- System-level tasks, git operations, multi-file refactoring
+- API implementations, testing frameworks, deployment prep
+- MCP server management and configuration
 
----
-
-## 2 ▪ Artefacts
-
-| Tag | File | Size cap |
-|-----|------|----------|
-| `handoff:plan`   | `*-slice-plan.md`      | ≤ 400 tokens |
-| `handoff:impl`   | PR diff / commit patch | — |
-| `handoff:review` | PR comments            | — |
-| `handoff:done`   | Merge commit note      | 1 line |
+**Cursor (Frontend Lead)**:
+- React components, UI/UX implementation, styling
+- Code review using diff view, quick edits and documentation
+- Frontend integration with Claude's APIs
+- Real-time development and user interaction logic
 
 ---
 
-## 3 ▪ Workflow
+## 2 ▪ Task Routing Matrix
 
-1. **Claude** designs feature slice → commit with tag `handoff:plan`.  
-2. **Cursor** implements & tests → open PR tagged `handoff:impl`.  
-3. **Claude** reviews, requests changes, approves → `handoff:review`.  
-4. **Cursor** merges → add `handoff:done` note to changelog.  
-5. Repeat per slice.
+| Complexity | Task Type | Agent | MCP Support |
+|------------|-----------|-------|-------------|
+| 1-4 | UI components, forms, styling | Cursor | @github for quick PRs |
+| 5-8 | Backend APIs, OCR, database | Claude Code | @supabase, @taskmaster-ai |
+| 8-10 | Full features | Both (parallel) | All MCP servers |
 
 ---
 
-## 4 ▪ Service-level goals
+## 3 ▪ Enhanced Workflow Patterns
 
-* Turnaround per hand-off ≤ 4 hrs during business day.  
-* Zero lost context (design doc must fully cover acceptance criteria).  
-* PR passes unit & integration tests before `handoff:review`.
+### Pattern A: Terminal-in-Cursor (Recommended)
+1. **Cursor** opens terminal, runs `claude` command
+2. **Claude Code** handles backend implementation with MCP access
+3. **Cursor** reviews changes in diff view, implements UI
+4. **Both** coordinate through structured handoff messages
+
+### Pattern B: Sequential Development
+1. **Claude Code** implements backend → commit with `handoff:impl`
+2. **Cursor** reviews and builds frontend → tag `handoff:frontend`
+3. **Claude Code** handles integration testing → `handoff:testing`
+4. **Cursor** polishes UX and creates PR → `handoff:review`
+
+### Pattern C: Parallel Development
+1. **Both** start simultaneously on different aspects
+2. **Regular sync points** every 30 minutes with status updates
+3. **Integration phase** with coordinated testing
+4. **Joint review** and deployment preparation
+
+---
+
+## 4 ▪ MCP-Enhanced Handoffs
+
+### Context Sharing
+- Use `@supabase` MCP to verify current database state
+- Use `@github` MCP for coordinated PR management
+- Use `@taskmaster-ai` MCP for task breakdown and tracking
+- Use `@filesystem` MCP for efficient file operations
+
+### Handoff Message Format
+```markdown
+## Handoff: [Feature] → [Next Phase]
+
+**Agent**: CLAUDE | CURSOR
+**MCP Context**: @supabase verified schema, @github PR #123 ready
+
+**Completed**:
+- Backend OCR service with confidence scoring
+- Database status management
+- Unit tests (95% coverage)
+
+**Next Steps**:
+- Upload UI component needed
+- Review modal for low-confidence results
+- Progress indicators for processing
+
+**Files**: 
+- `server/src/features/contacts/ocr.service.ts:45-89`
+- Database schema updated in migration_003
+
+**MCP Commands for Next Agent**:
+- `@supabase query contacts where status='pending_review'`
+- `@github create PR with OCR integration label`
+```
+
+## 5 ▪ Performance Targets
+
+### Multi-Agent Efficiency
+- **Development Speed**: 50% faster than single-agent
+- **Handoff Frequency**: < 3 handoffs per feature
+- **Context Loss**: Zero (MCP-verified state)
+- **Merge Conflicts**: < 2 per week
+- **Test Coverage**: > 80% maintained
+
+### Session Optimization
+- **Claude Code**: 10-20 minute autonomous sessions
+- **Cursor**: 1-2 hour UI development sessions
+- **MCP Usage**: Real-time state verification
+- **Token Management**: `/compact` every 20 minutes
+
+## 6 ▪ Security & Quality Gates
+
+### Before Handoff
+- [ ] MCP tokens valid and properly scoped
+- [ ] All tests passing (unit + integration)
+- [ ] Code follows project conventions
+- [ ] Security review completed (if applicable)
+- [ ] Database migrations tested
+
+### During Handoff
+- [ ] Clear handoff message with MCP context
+- [ ] Files tagged with line number references
+- [ ] Next steps clearly documented
+- [ ] MCP commands provided for context
+
+### After Handoff
+- [ ] Receiving agent confirms context
+- [ ] MCP state verified
+- [ ] Integration tests still passing
+- [ ] Performance benchmarks maintained
 
 *END*

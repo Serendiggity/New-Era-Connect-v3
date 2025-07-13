@@ -1,6 +1,6 @@
 import React from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
-import { useContact, useDeleteContact, useUpdateContact } from '../api/contacts.api';
+import { Link } from 'react-router-dom';
+import { useUpdateContact } from '../api/contacts.api';
 import { Button, Card, LoadingSpinner } from '../../../shared/ui';
 import { getContactStatusDisplay, formatPhoneNumber, getContactInitials } from '../lib/contacts.utils';
 
@@ -16,30 +16,23 @@ const statusClassMap: Record<string, string> = {
 const getStatusClasses = (status: string): string => {
   return statusClassMap[status] || statusClassMap.default;
 };
-export function ContactDetail() {
-  const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
-  const contactId = parseInt(id!, 10);
-  
-  const { data: contact, isLoading, error } = useContact(contactId);
-  const deleteContact = useDeleteContact();
+interface ContactDetailProps {
+  contact?: any;
+  isLoading?: boolean;
+  error?: any;
+  onEdit?: () => void;
+  onDelete?: () => void;
+  onBack?: () => void;
+}
+
+export function ContactDetail({ contact, isLoading, error, onEdit, onDelete, onBack }: ContactDetailProps) {
   const updateContact = useUpdateContact();
 
-  const handleDelete = async () => {
-    if (!confirm('Are you sure you want to delete this contact?')) return;
-    
-    try {
-      await deleteContact.mutateAsync(contactId);
-      navigate('/contacts');
-    } catch (error) {
-      alert('Failed to delete contact. Please try again.');
-    }
-  };
-
   const handleVerify = async () => {
+    if (!contact) return;
     try {
       await updateContact.mutateAsync({
-        id: contactId,
+        id: contact.id,
         status: 'user_verified',
       });
     } catch (error) {
@@ -58,14 +51,28 @@ export function ContactDetail() {
     <div className="max-w-4xl mx-auto space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold">Contact Details</h1>
+        <div className="flex items-center gap-4">
+          {onBack && (
+            <button
+              onClick={onBack}
+              className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+            >
+              ← Back to Contacts
+            </button>
+          )}
+          <h1 className="text-3xl font-bold">Contact Details</h1>
+        </div>
         <div className="flex gap-2">
-          <Link to={`/contacts/${contactId}/edit`}>
-            <Button variant="secondary">Edit</Button>
-          </Link>
-          <Button variant="danger" onClick={handleDelete}>
-            Delete
-          </Button>
+          {onEdit && (
+            <Button variant="secondary" onClick={onEdit}>
+              Edit
+            </Button>
+          )}
+          {onDelete && (
+            <Button variant="danger" onClick={onDelete}>
+              Delete
+            </Button>
+          )}
         </div>
       </div>
 
