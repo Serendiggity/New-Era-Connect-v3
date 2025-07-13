@@ -79,6 +79,16 @@ As a user uploading business cards, I want the option to use AI-enhanced OCR det
 
 ---
 
+### Direct Camera Upload for Contacts
+**Priority**: Medium  
+**Effort**: 2-3 hours  
+- Add camera capture functionality directly in contact creation flow
+- Allow users to take photos of business cards using device camera
+- Integrate with existing OCR processing pipeline
+- Support both file upload and direct camera capture
+
+---
+
 ## Other Planned Features
 
 ### Lead Scoring System

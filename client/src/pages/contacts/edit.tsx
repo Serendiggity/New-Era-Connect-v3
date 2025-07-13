@@ -66,7 +66,7 @@ export default function EditContactPage() {
           setIsUpdating(true);
           setUpdateError(null);
           try {
-            await updateContact.mutateAsync({ ...data, id: contactId });
+            await updateContact.mutateAsync({ id: contactId, ...data });
             navigate(`/contacts/${contactId}`, { replace: true });
           } catch (err: any) {
             setUpdateError(err?.message || 'Failed to update contact. Please try again.');

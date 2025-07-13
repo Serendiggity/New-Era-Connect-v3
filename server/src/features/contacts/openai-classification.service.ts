@@ -101,7 +101,7 @@ export class OpenAIClassificationService {
    * Build the classification prompt for OpenAI
    */
   private buildClassificationPrompt(input: ClassificationInput): string {
-    return `You are an expert at analyzing business card OCR data. Your task is to intelligently classify extracted text into the correct contact fields.
+    return `You are an expert at analyzing business card OCR data. Your task is to intelligently classify extracted text into the correct contact fields, with special focus on finding the actual person's name.
 
 **Raw OCR Text:**
 "${input.raw_text}"
@@ -116,18 +116,28 @@ export class OpenAIClassificationService {
 
 **OCR Confidence:** ${(input.ocr_confidence * 100).toFixed(1)}%
 
-**Classification Rules:**
-1. **Names** should be actual person names (first/last), not job titles or company names
-2. **Job titles** go in "title" field: "Manager", "CEO", "Real Estate Specialist", etc.
-3. **Company names** should be organization names, not job descriptions
-4. **Never put the same value** in multiple fields (name, company, title)
-5. **If name is unclear**, try extracting from email (john.smith@company.com → "John Smith")
-6. **If extraction failed completely**, use "Contact" as fallback name
+**CRITICAL Classification Rules:**
+1. **NEVER accept "Contact" as a name** - Always try to find the actual person's name
+2. **Extract names from emails**: sophie@domain.com → "Sophie", john.smith@company.com → "John Smith"
+3. **Names should be actual people**, not job titles, company names, or phone numbers
+4. **Job titles** go in "title" field: "Manager", "CEO", "Real Estate Specialist", "REALTOR", etc.
+5. **Company names** should be organizations, extract from domains if needed: mywebsite.com → "MyWebsite"
+6. **Phone numbers NEVER go in company field** - that's a major error
+7. **Look carefully at ALL text** for person names, even if OCR missed them initially
+8. **If truly no name found**, use email local part as name (before @)
 
-**Common Misclassifications to Fix:**
-- "REAL ESTATE SPECIALIST" → title field, not name field
-- "MANAGER" → title field, not name field
-- Job descriptions as company names → extract actual company if visible
+**Common Critical Errors to Fix:**
+- "Contact" as name → Extract from email or find actual name in text
+- Phone numbers as company names → Extract actual company from domain/text
+- Job titles as names → Move to title field, find real name
+- "REALTOR" is a job title, not a name
+- Missing obvious names in email addresses
+
+**Name Extraction Priority:**
+1. Clear person names in the OCR text (First Last)
+2. Names from email addresses (john.doe@company → "John Doe")
+3. Names from partial email text (sophie@... → "Sophie")
+4. Only as absolute last resort: "Contact"
 
 **Response Format:**
 Respond with valid JSON only. Provide confidence scores (0.0-1.0) for each field based on how certain you are about the classification.
@@ -220,28 +230,41 @@ Example response:
     const issues: string[] = ['OpenAI classification failed, using basic fallback'];
     let overallConfidence = input.ocr_confidence * 0.7; // Reduced confidence for fallback
 
-    // Basic fallback logic
-    if (!corrected.full_name || this.looksLikeJobTitle(corrected.full_name)) {
+    // Enhanced fallback logic with better name extraction
+    if (!corrected.full_name || corrected.full_name === 'Contact' || this.looksLikeJobTitle(corrected.full_name)) {
       if (corrected.full_name && this.looksLikeJobTitle(corrected.full_name)) {
         corrected.title = corrected.full_name;
         issues.push('Moved job title from name field to title field');
       }
       
-      // Try to extract name from email
+      // Try to extract name from email (including partial emails)
+      let nameFound = false;
       if (corrected.email) {
         const nameFromEmail = this.extractNameFromEmail(corrected.email);
         if (nameFromEmail) {
           corrected.full_name = nameFromEmail;
           issues.push('Generated name from email address');
-        } else {
-          corrected.full_name = 'Contact';
-          issues.push('Used fallback name');
+          nameFound = true;
         }
-      } else {
-        corrected.full_name = 'Contact';
-        issues.push('Used fallback name');
       }
-      overallConfidence *= 0.6;
+      
+      // Try to extract from partial email in raw text
+      if (!nameFound) {
+        const emailMatch = input.raw_text.match(/([a-zA-Z]+)@/);
+        if (emailMatch) {
+          corrected.full_name = this.capitalizeWord(emailMatch[1]);
+          issues.push('Extracted name from partial email in text');
+          nameFound = true;
+        }
+      }
+      
+      // Only use "Contact" as absolute last resort
+      if (!nameFound) {
+        corrected.full_name = 'Contact';
+        issues.push('Used fallback name - no extractable name found');
+      }
+      
+      overallConfidence *= nameFound ? 0.8 : 0.6; // Less penalty if we found a real name
     }
 
     // If company and name are the same, clear company

@@ -10,6 +10,7 @@ import ContactsPage from './pages/contacts';
 import ContactDetailPage from './pages/contacts/[id]';
 import NewContactPage from './pages/contacts/new';
 import EditContactPage from './pages/contacts/edit';
+import BulkUploadPage from './pages/contacts/bulk-upload';
 import LeadGroupsPage from './pages/lead-groups';
 import LeadGroupDetailPage from './pages/lead-groups/[id]';
 
@@ -42,6 +43,7 @@ function App() {
             {/* Contacts routes */}
             <Route path="/contacts" element={<ContactsPage />} />
             <Route path="/contacts/new" element={<NewContactPage />} />
+            <Route path="/contacts/bulk-upload" element={<BulkUploadPage />} />
             <Route path="/contacts/:id" element={<ContactDetailPage />} />
             <Route path="/contacts/:id/edit" element={<EditContactPage />} />
             

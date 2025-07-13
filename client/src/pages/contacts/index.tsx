@@ -29,9 +29,14 @@ export default function ContactsPage() {
       <div className="mb-6">
         <div className="flex items-center justify-between mb-4">
           <h1 className="text-3xl font-bold">Contacts</h1>
-          <Link to="/contacts/new">
-            <Button>Add Contact</Button>
-          </Link>
+          <div className="flex gap-2">
+            <Link to="/contacts/bulk-upload">
+              <Button variant="secondary">Bulk Upload</Button>
+            </Link>
+            <Link to="/contacts/new">
+              <Button>Add Contact</Button>
+            </Link>
+          </div>
         </div>
 
         {/* Success message */}

@@ -27,7 +27,7 @@ export function ContactForm({ contact, eventId, onSubmit, onCancel, skipNavigati
     title: contact?.title || '',
     phone: contact?.phone || '',
     linkedin_url: contact?.linkedin_url || '',
-    status: contact?.status || 'processing' as ContactStatus,
+    status: contact?.status || 'user_verified' as ContactStatus,
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -42,13 +42,15 @@ export function ContactForm({ contact, eventId, onSubmit, onCancel, skipNavigati
           : { ...formData }; // Create - event_id is optional
 
       // Remove empty optional fields (like linkedin_url) from submitData
+      // But preserve status field even if it's a valid empty-like value
       const cleanedData = { ...submitData } as Record<string, unknown>;
       Object.keys(cleanedData).forEach((key) => {
-        if (cleanedData[key] === "") {
+        if (cleanedData[key] === "" && key !== "status") {
           delete cleanedData[key];
         }
       });
 
+      console.log('Submitting contact data:', cleanedData);
       await onSubmit(cleanedData);
       
       // Only navigate if not explicitly skipped by parent

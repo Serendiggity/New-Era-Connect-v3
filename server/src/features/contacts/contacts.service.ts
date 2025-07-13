@@ -20,7 +20,7 @@ export const CreateContactSchema = z.object({
   ocr_confidence: z.number().min(0).max(1).optional(),
   ocr_raw_data: z.any().optional(),
   user_modified_fields: z.record(z.boolean()).optional(),
-  status: ContactStatusEnum.optional().default('processing'),
+  status: ContactStatusEnum.optional(),
 });
 
 export const UpdateContactSchema = CreateContactSchema.partial().extend({
@@ -103,15 +103,19 @@ export class ContactsService {
   }
 
   async create(data: CreateContactInput) {
-    // Determine status based on OCR confidence
-    let finalStatus = data.status || 'processing';
+    // Determine status based on whether this is OCR or manual entry
+    let finalStatus = data.status;
     
     if (data.ocr_confidence !== undefined) {
+      // OCR-based contact - determine status by confidence
       if (data.ocr_confidence >= this.REVIEW_CONFIDENCE_THRESHOLD) {
         finalStatus = 'completed';
       } else {
         finalStatus = 'pending_review';
       }
+    } else {
+      // Manual entry - default to user_verified unless explicitly set
+      finalStatus = finalStatus || 'user_verified';
     }
 
     // Convert API data to database format

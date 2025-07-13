@@ -4,6 +4,7 @@ export { ContactCard } from './ui/ContactCard';
 export { ContactForm } from './ui/ContactForm';
 export { ContactDetail } from './ui/ContactDetail';
 export { BusinessCardUpload } from './ui/BusinessCardUpload';
+export { BulkBusinessCardUpload } from './ui/BulkBusinessCardUpload';
 export { OcrReviewModal } from './ui/OcrReviewModal';
 
 // API Hooks
