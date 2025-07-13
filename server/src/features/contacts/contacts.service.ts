@@ -224,36 +224,43 @@ export class ContactsService {
       });
     }
 
-    const updateData: any = {
-      eventId: data.event_id,
-      fullName: data.full_name,
+    const apiDataForMapping: any = {
+      event_id: data.event_id,
+      full_name: data.full_name,
       email: data.email,
       company: data.company,
       title: data.title,
       phone: data.phone,
-      linkedinUrl: data.linkedin_url,
-      businessCardUrl: data.business_card_url,
-      ocrConfidence: data.ocr_confidence?.toString(),
-      ocrRawData: data.ocr_raw_data,
-      userModifiedFields: userModifiedFields,
+      linkedin_url: data.linkedin_url,
+      business_card_url: data.business_card_url,
+      ocr_confidence: data.ocr_confidence,
+      ocr_raw_data: data.ocr_raw_data,
+      user_modified_fields: userModifiedFields,
       status: data.status,
-      updatedAt: new Date(),
+      updated_at: new Date(),
     };
 
     if (isUserVerification) {
-      updateData.reviewedAt = new Date();
+      apiDataForMapping.reviewed_at = new Date();
     }
 
-    // Remove undefined values
-    Object.keys(updateData).forEach(key => {
-      if (updateData[key] === undefined) {
-        delete updateData[key];
+    const dbData = mapContactApiToDb(apiDataForMapping);
+
+    // Ensure ocr_confidence is stored as string in database
+    if (dbData.ocrConfidence !== undefined) {
+      dbData.ocrConfidence = dbData.ocrConfidence.toString();
+    }
+
+    // Remove undefined values from the final database object
+    Object.keys(dbData).forEach(key => {
+      if ((dbData as any)[key] === undefined) {
+        delete (dbData as any)[key];
       }
     });
 
     const [updated] = await db
       .update(contacts)
-      .set(updateData)
+      .set(dbData)
       .where(eq(contacts.id, id))
       .returning();
 
